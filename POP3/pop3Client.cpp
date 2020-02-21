@@ -6,7 +6,7 @@
 #include <unistd.h>
 
 #include "pop3Client.h"
-#include "base64util.h"
+#include "Base64/base64util.h"
 
 POP3Client::POP3Client() {
     SSL_library_init();

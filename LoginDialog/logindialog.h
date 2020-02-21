@@ -15,11 +15,15 @@ public:
     LoginDialog(QMainWindow* parent = nullptr);
     virtual ~LoginDialog();
 
-    static const int lineHeight = 30;
-
 private:
+    static const int loginDialogWidth = 50;
+
     QLineEdit* emailLine = nullptr;
     QLineEdit* passwordLine = nullptr;
+    QLineEdit* smtpServerLine = nullptr;
+    QLineEdit* smtpPortLine = nullptr;
+    QLineEdit* pop3ServerLine = nullptr;
+    QLineEdit* pop3PortLine = nullptr;
     QPushButton* okButton = nullptr;
 
 public slots:

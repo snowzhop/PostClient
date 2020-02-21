@@ -7,7 +7,7 @@
 #include <cstring>
 
 #include "smtpClient.h"
-#include "base64util.h"
+#include "Base64/base64util.h"
 
 #define BASE64_SIZE(x)  (((x)+2) / 3 * 4 + 1)
 

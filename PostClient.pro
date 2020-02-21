@@ -8,7 +8,11 @@ QT       += core gui
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
-TARGET = MMACA_Course_work
+LIBS += -lssl \
+    -lcrypto
+
+
+TARGET = PostClient
 TEMPLATE = app
 
 # The following define makes your compiler emit warnings if you use
@@ -25,14 +29,22 @@ DEFINES += QT_DEPRECATED_WARNINGS
 CONFIG += c++11
 
 SOURCES += \
+        Base64/base64util.cpp \
+        LoginDialog/logindialog.cpp \
+        POP3/pop3Client.cpp \
+        SMTP/smtpClient.cpp \
         main.cpp \
         mainwindow.cpp
 
 HEADERS += \
+        Base64/base64util.h \
+        LoginDialog/logindialog.h \
+        POP3/pop3Client.h \
+        SMTP/smtpClient.h \
         mainwindow.h
 
 FORMS += \
-        mainwindow.ui
+    mainwindow.ui
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
