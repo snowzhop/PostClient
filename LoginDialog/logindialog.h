@@ -1,6 +1,8 @@
 #ifndef LOGINDIALOG_H
 #define LOGINDIALOG_H
 
+#include "userdata.h"
+
 #include <QDialog>
 #include <QMainWindow>
 #include <QHBoxLayout>
@@ -30,7 +32,7 @@ public slots:
     void saveFields();
 
 signals:
-    void fieldsSaved(QString em, QString pass);
+    void fieldsSaved(const UserData& data);
 };
 
 #endif // LOGINDIALOG_H

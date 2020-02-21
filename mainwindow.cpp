@@ -1,21 +1,16 @@
 #include "mainwindow.h"
+#include "LoginDialog/userdata.h"
 #include "ui_mainwindow.h"
 #include <QDebug>
 
-struct UserInfo {
-    QString email;
-    QString password;
-};
-
-UserInfo getUserInfo(QMainWindow* w) {
+UserData getUserInfo(QMainWindow* w) {
     LoginDialog loginDialog(w);
     loginDialog.setModal(true);
 
-    UserInfo user;
+    UserData user;
     QObject::connect(&loginDialog, &LoginDialog::fieldsSaved,
-    [&user](const QString& em, const QString& pass) {
-        user.email = em;
-        user.password = pass;
+    [&user](const UserData& d) {
+        user = d;
     });
 
     loginDialog.exec();
@@ -23,7 +18,7 @@ UserInfo getUserInfo(QMainWindow* w) {
     return user;
 }
 
-MainWindow::MainWindow(QWidget *parent) :
+MainWindow::MainWindow(QWidget* parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow),
     pop3Client(new POP3Client()),
@@ -32,7 +27,15 @@ MainWindow::MainWindow(QWidget *parent) :
 
     auto user = getUserInfo(this);
 
-    qDebug() << user.email << "\t" << user.password;
+    bool ok;
+    char* res = nullptr;
+    short port = user.pop3Port.toShort(&ok);
+    if (ok) {
+        res = pop3Client->connectToServer(user.pop3Server.toUtf8().constData(), port);
+    }
+    if (res) {
+        qDebug() << "Done?\n" << res;
+    }
 }
 
 MainWindow::~MainWindow() {

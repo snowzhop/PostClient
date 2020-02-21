@@ -91,5 +91,13 @@ LoginDialog::~LoginDialog() {
 }
 
 void LoginDialog::saveFields() {
-    emit fieldsSaved(emailLine->text(), passwordLine->text());
+    UserData data;
+    data.email = emailLine->text();
+    data.password = passwordLine->text();
+    data.smtpServer = smtpServerLine->text();
+    data.smtpPort = smtpPortLine->text();
+    data.pop3Server = pop3ServerLine->text();
+    data.pop3Port = pop3PortLine->text();
+
+    emit fieldsSaved(data);
 }

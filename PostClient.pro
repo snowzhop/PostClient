@@ -39,6 +39,7 @@ SOURCES += \
 HEADERS += \
         Base64/base64util.h \
         LoginDialog/logindialog.h \
+        LoginDialog/userdata.h \
         POP3/pop3Client.h \
         SMTP/smtpClient.h \
         mainwindow.h
