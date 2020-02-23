@@ -10,6 +10,8 @@ namespace Ui {
 class MainWindow;
 }
 
+class Ui_Main;
+
 class MainWindow : public QMainWindow {
     Q_OBJECT
 
@@ -17,12 +19,17 @@ public:
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
-    void testMethod();
-
 private:
-    Ui::MainWindow *ui;
+    bool connectToPop3Server();
+
+    Ui_Main *ui;
     POP3Client* pop3Client = nullptr;
     SmtpClient* smtpClient = nullptr;
+    bool pop3UserConnectionStatus = false;
+    bool smtpUserConnectionStatus = false;
 };
+
+UserData getUserInfo(QMainWindow* w);
+bool checkPop3Response(const QString& response);
 
 #endif // MAINWINDOW_H
