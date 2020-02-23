@@ -25,7 +25,7 @@ public:
     SmtpClient();
     ~SmtpClient();
     void connectToSMTPServer(const char* smtpHostName, const short smtpPort);
-    int login(const char* smtpLogin, const char* smtpPassword);
+    void login(const char* smtpLogin, const char* smtpPassword);
     size_t createLetter(
         const char* toMail,
         const char* letterSubject,
