@@ -1,6 +1,8 @@
 #include <netinet/in.h>
 #include <netdb.h>
 
+#include <fcntl.h>
+
 #include <iostream>
 #include <cstring>
 #include <unistd.h>
@@ -37,12 +39,76 @@ char* POP3Client::connectToServer(const std::string& pop3ServerName, const short
     }
     std::cout << "SocketFd was initialized" << std::endl;
 
-    if (connect(socketFd, reinterpret_cast<sockaddr*>(&serverAddr), sizeof(sockaddr)) < 0) {
-        close(socketFd);
-        socketFd = -1;
-        std::cerr << "Can't connect to host " << pop3ServerName << ":" << pop3Port << std::endl;
+    long arg = 0;
+    fd_set setOfConnections;
+    timeval tv;
+    int valopt;
+    socklen_t len = 0;
+
+    if ( (arg = fcntl(socketFd, F_GETFL, nullptr)) < 0 ) {
+        std::cerr << "Error fcntl(..., F_GETFL): " << strerror(errno) << std::endl;
         return nullptr;
     }
+
+    arg |= O_NONBLOCK;
+    if (fcntl(socketFd, F_SETFL, arg) < 0) {
+        std::cerr << "Error fcntl(..., F_SETFL): " << strerror(errno) << std::endl;
+        return nullptr;
+    }
+
+    if (connect(socketFd, reinterpret_cast<sockaddr*>(&serverAddr), sizeof(sockaddr)) < 0) {
+        if (errno == EINPROGRESS) {
+            std::cout << "EINPROGRESS in connect() - selecting" << std::endl;
+            do {
+                tv.tv_sec = 7;
+                tv.tv_usec = 0;
+                FD_ZERO(&setOfConnections);
+                FD_SET(socketFd, &setOfConnections);
+                auto result = select(socketFd+1, nullptr, &setOfConnections, nullptr, &tv);
+                if (result < 0 && errno != EINTR) {
+                    std::cerr << "Error connecting " << errno << " - " << strerror(errno) << std::endl;
+                    return nullptr;
+                } else if (result > 0) {
+                    len = sizeof(int);
+                    if (getsockopt(socketFd, SOL_SOCKET, SO_ERROR, reinterpret_cast<void*>(&valopt), &len) < 0) {
+                        std::cerr << "Error in getsockopt() " << errno << " - " << strerror(errno) << std::endl;
+                        return nullptr;
+                    }
+
+                    if (valopt) {
+                        std::cerr << "Error in delayed connection() " << valopt << " - " << strerror(valopt) << std::endl;
+                        return nullptr;
+                    }
+                    break;
+                } else {
+                    std::cerr << "Timout in select was cancelling!" << std::endl;
+                    std::cerr << "Check it with normal connection" << std::endl;
+                    return nullptr;
+                }
+            } while(1);
+        } else {
+            std::cerr << "Error connection " << errno << " - " << strerror(errno) << std::endl;
+            return nullptr;
+        }
+    }
+
+    if ( (arg = fcntl(socketFd, F_GETFL, nullptr)) < 0 ) {
+        std::cerr << "Error fcntl(..., F_GETFL)2: " << strerror(errno) << std::endl;
+        return nullptr;
+    }
+    arg &= (~O_NONBLOCK);
+    if (fcntl(socketFd, F_SETFL, arg) < 0) {
+        std::cerr << "Error fcntl(..., F_SETFL)2: " << strerror(errno) << std::endl;
+        return nullptr;
+    }
+
+//    connect() without timeout
+//    if (connect(socketFd, reinterpret_cast<sockaddr*>(&serverAddr), sizeof(sockaddr)) < 0) {
+//        close(socketFd);
+//        socketFd = -1;
+//        std::cerr << "Can't connect to host " << pop3ServerName << ":" << pop3Port << std::endl;
+//        return nullptr;
+//    }
 
     const SSL_METHOD *method = nullptr;
     SSL_CTX* ctx = nullptr;
