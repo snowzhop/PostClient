@@ -25,21 +25,21 @@ LoginDialog::LoginDialog(QMainWindow* parent) :
 
     // Email
     emailLine->setPlaceholderText("example@example.domain");
-    emailLine->setMinimumWidth(200);
+    emailLine->setMinimumWidth(loginDialogWidth);
     // Password
     passwordLine->setPlaceholderText("password");
     passwordLine->setEchoMode(QLineEdit::EchoMode::Password);
-    passwordLine->setMinimumWidth(200);
+    passwordLine->setMinimumWidth(loginDialogWidth);
     // SMTP
     smtpServerLine->setPlaceholderText("smtp.ser.ver");
-    smtpServerLine->setMinimumWidth(200);
+    smtpServerLine->setMinimumWidth(loginDialogWidth);
     smtpPortLine->setPlaceholderText("000");
-    smtpPortLine->setMinimumWidth(200);
+    smtpPortLine->setMinimumWidth(loginDialogWidth);
     // POP3
     pop3ServerLine->setPlaceholderText("pop3.ser.ver");
-    pop3ServerLine->setMinimumWidth(200);
+    pop3ServerLine->setMinimumWidth(loginDialogWidth);
     pop3PortLine->setPlaceholderText("000");
-    pop3PortLine->setMinimumWidth(200);
+    pop3PortLine->setMinimumWidth(loginDialogWidth);
 
     QVBoxLayout* mainLayout         = new QVBoxLayout();
     QHBoxLayout* emailLayout        = new QHBoxLayout();
@@ -77,6 +77,7 @@ LoginDialog::LoginDialog(QMainWindow* parent) :
     connect(okButton, &QPushButton::clicked, this, &LoginDialog::saveFields);
     connect(okButton, &QPushButton::clicked, this, &QWidget::close);
 
+
     this->setLayout(mainLayout);
 }
 
@@ -92,12 +93,12 @@ LoginDialog::~LoginDialog() {
 
 void LoginDialog::saveFields() {
     UserData data;
-    data.email = emailLine->text();
-    data.password = passwordLine->text();
+    data.email      = emailLine->text();
+    data.password   = passwordLine->text();
     data.smtpServer = smtpServerLine->text();
-    data.smtpPort = smtpPortLine->text();
+    data.smtpPort   = smtpPortLine->text();
     data.pop3Server = pop3ServerLine->text();
-    data.pop3Port = pop3PortLine->text();
+    data.pop3Port   = pop3PortLine->text();
 
     emit fieldsSaved(data);
 }

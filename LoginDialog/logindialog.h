@@ -18,7 +18,7 @@ public:
     virtual ~LoginDialog();
 
 private:
-    static const int loginDialogWidth = 50;
+    static const int loginDialogWidth = 200;
 
     QLineEdit* emailLine = nullptr;
     QLineEdit* passwordLine = nullptr;
