@@ -42,7 +42,8 @@ HEADERS += \
         LoginDialog/userdata.h \
         POP3/pop3Client.h \
         SMTP/smtpClient.h \
-        mainwindow.h
+        mainwindow.h \
+        ui_main.h
 
 FORMS += \
     mainwindow.ui
