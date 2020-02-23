@@ -14,12 +14,6 @@ MainWindow::MainWindow(QWidget* parent) :
     auto user = getUserInfo(this);
 
     connectToMailBox(user);
-//    bool ok = false;
-//    short port = user.smtpPort.toShort(&ok);
-//    if (ok) {
-//        int res = smtpClient->connectToSMTPServer(user.smtpServer.toUtf8().constData(), port);
-//        qDebug() << "res = " << res;
-//    }
 }
 
 MainWindow::~MainWindow() {
@@ -70,6 +64,7 @@ bool MainWindow::connectToPop3Server(const QString& serverAddr, const QString& s
     if (ok) {
         answer = pop3Client->connectToServer(serverAddr.toUtf8().constData(), port);
         if (isPop3ResponseCorrect(QString(answer))) {
+            status.pop3Connection = true;
             return true;
         }
     }
@@ -77,22 +72,31 @@ bool MainWindow::connectToPop3Server(const QString& serverAddr, const QString& s
 }
 
 bool MainWindow::connectToPop3User(const QString &email, const QString &password) {
-    char* answer = nullptr;
-    auto req = std::string("USER ").append(email.toUtf8().constData());
-    answer = pop3Client->sendRequest(req.append("\r\n"));
-    if (!isPop3ResponseCorrect(QString(answer))) {
-        return false;
+    if (status.pop3Connection) {
+        char* answer = nullptr;
+        auto req = std::string("USER ").append(email.toUtf8().constData());
+        answer = pop3Client->sendRequest(req.append("\r\n"));
+        if (!isPop3ResponseCorrect(QString(answer))) {
+            return false;
+        }
+        req = std::string("PASS ").append(password.toUtf8().constData());
+        answer = pop3Client->sendRequest(req.append("\r\n"));
+        if (!isPop3ResponseCorrect(QString(answer))) {
+            return false;
+        }
+        status.pop3UserAuth = true;
+        return true;
     }
-    req = std::string("PASS ").append(password.toUtf8().constData());
-    answer = pop3Client->sendRequest(req.append("\r\n"));
-    if (!isPop3ResponseCorrect(QString(answer))) {
-        return false;
-    }
-    return true;
+    return false;
 }
 
 bool MainWindow::connectToSmtpServer(const QString &serverAddr, const QString &serverPort) {
-
+    bool ok = false;
+    short port = serverPort.toShort(&ok);
+    if (ok) {
+        int res = smtpClient->connectToSMTPServer(serverAddr.toUtf8().constData(), port);
+        qDebug() << "res = " << res;
+    }
 }
 
 bool isPop3ResponseCorrect(const QString& response) {
