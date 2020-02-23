@@ -8,6 +8,7 @@
 #include <QPushButton>
 #include <QStyle>
 #include <QBoxLayout>
+#include <QStatusBar>
 
 class Ui_Main {
 public:
@@ -16,6 +17,9 @@ public:
     QMenuBar* menuBar;
     QTableWidget* tableWidget;
     QBoxLayout* boxLayout;
+    QStatusBar* statusBar;
+
+    static const int _5_SECONDS_IN_MS = 5000;
 
     void setupUi(QMainWindow* mainWindow) {
         if (mainWindow->objectName().isEmpty()) {
@@ -39,11 +43,15 @@ public:
 
         menuBar = new QMenuBar(mainWindow);
         menuBar->setObjectName("menuBar");
-//        menuBar->setGeometry(0, 0, 400, 20);
         menuBar->addMenu("Test menu");
+
+        statusBar = new QStatusBar(mainWindow);
+        statusBar->setObjectName("statusBar");
+        statusBar->show();
 
         boxLayout->addWidget(tableWidget);
 
+        mainWindow->setStatusBar(statusBar);
         mainWindow->addToolBar(Qt::TopToolBarArea, toolBar);
         mainWindow->setMenuBar(menuBar);
         mainWindow->setCentralWidget(centralWidget);
