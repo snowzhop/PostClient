@@ -31,6 +31,7 @@ private:
 
     bool connectToPop3Server(const QString& serverAddr, const QString& serverPort);
     bool connectToPop3User(const QString& email, const QString& password);
+    void showLetters();
     int getListOfLetters();
 
     bool connectToSmtpServer(const QString& serverAddr, const QString& serverPort);
@@ -41,6 +42,8 @@ private:
     POP3Client* pop3Client = nullptr;
     SmtpClient* smtpClient = nullptr;
     Status status;
+
+    static const size_t lenOfSubjectStr = 10;
 };
 
 UserData getUserInfo(QMainWindow* w);
