@@ -40,21 +40,29 @@ UserData getUserInfo(QMainWindow* w) {
 void MainWindow::connectToMailBox(const UserData& user) {
     // POP3
     if (!connectToPop3Server(user.pop3Server, user.pop3Port)) {
-        throw std::runtime_error("Can't connect to server");
+        ui->statusBar->showMessage("Can't connect to POP3 server");
+    } else {
+        ui->statusBar->showMessage("Connected to POP3 server", ui->_5_SECONDS_IN_MS);
+        qDebug() << "Connected to POP3 server";
     }
-    ui->statusBar->showMessage("Connected to POP3 server", ui->_5_SECONDS_IN_MS);
-    qDebug() << "Connected to POP3 server";
+
     if (!connectToPop3User(user.email, user.password)) {
-        throw std::runtime_error("Can't auth user");
+        ui->statusBar->showMessage("Can't auth user (POP3)");
+    } else {
+        ui->statusBar->showMessage("User was authenticated(POP3)", ui->_5_SECONDS_IN_MS);
+        qDebug() << "User was authenticated(POP3)";
     }
-    ui->statusBar->showMessage("User was authenticated(POP3)", ui->_5_SECONDS_IN_MS);
-    qDebug() << "User was authenticated(POP3)";
 
     // SMTP
     if (!connectToSmtpServer(user.smtpServer, user.smtpPort)) {
-        throw std::runtime_error("Can't connect to SMTP server");
+        ui->statusBar->showMessage("Can't connect to SMTP server");
+    } else {
+        ui->statusBar->showMessage("Connected to SMTP server", ui->_5_SECONDS_IN_MS);
     }
-    ui->statusBar->showMessage("Connected to SMTP server", ui->_5_SECONDS_IN_MS);
+
+    if (!connectToSmtpUser(user.email, user.password)) {
+
+    }
 }
 
 bool MainWindow::connectToPop3Server(const QString& serverAddr, const QString& serverPort) {
@@ -94,9 +102,28 @@ bool MainWindow::connectToSmtpServer(const QString &serverAddr, const QString &s
     bool ok = false;
     short port = serverPort.toShort(&ok);
     if (ok) {
-        int res = smtpClient->connectToSMTPServer(serverAddr.toUtf8().constData(), port);
-        qDebug() << "res = " << res;
+        try {
+            smtpClient->connectToSMTPServer(serverAddr.toUtf8().constData(), port);
+        } catch (const std::runtime_error& ex) {
+            qDebug() << ex.what();
+            return false;
+        }
+        status.smtpConnection = true;
+        return true;
     }
+    return false;
+}
+
+bool MainWindow::connectToSmtpUser(const QString &email, const QString &password) {
+    if (status.smtpConnection) {
+        try {
+            smtpClient->login(email.toUtf8().constData(), password.toUtf8().constData());
+        } catch (const std::runtime_error&) {
+            return false;
+        }
+        return true;
+    }
+    return false;
 }
 
 bool isPop3ResponseCorrect(const QString& response) {
