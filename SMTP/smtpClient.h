@@ -5,11 +5,26 @@
 //#include <openssl/bio.h>
 //#include <openssl/err.h>
 
+//namespace SMTP {
+//    enum class Status : int {
+//        OK = 0,
+//        SYS_ERR = -1,
+//        HOST_NAME_RESOLVE_ERR = -2,
+//        SOCK_ERR = -3,
+//        CONN_ERR = -4,
+//        GETSOCKOPT_ERR = -5,
+//        DELAYED_CONN_ERR = -6,
+//        TIMEOUT = -7,
+//        SSL_ERR = -8,
+//        SSL_CONN_ERR = -9
+//    };
+//}
+
 class SmtpClient {
 public:
     SmtpClient();
     ~SmtpClient();
-    int connectToSMTPServer(const char* smtpHostName, const short smtpPort);
+    void connectToSMTPServer(const char* smtpHostName, const short smtpPort);
     int login(const char* smtpLogin, const char* smtpPassword);
     size_t createLetter(
         const char* toMail,

@@ -97,7 +97,8 @@ int SmtpClient::connectToSMTPServer(const char* smtpHostName, const short smtpPo
 
     if (!(host = gethostbyname(smtpHostName))) {
         std::cerr << "Can't resolve hostname " << smtpHostName << std::endl;
-        return -1;
+//        return -1;
+        throw std::runtime_error(std::string("Can't resolve hostname ").append(smtpHostName));
     }
 
     memset(&smtpAddr, 0, sizeof(smtpAddr));
@@ -109,7 +110,8 @@ int SmtpClient::connectToSMTPServer(const char* smtpHostName, const short smtpPo
     socketFd = socket(PF_INET, SOCK_STREAM, 0);
     if (socketFd < 0) {
         std::cerr << "Can't initialize socket!" << std::endl;
-        return -1;
+//        return -1;
+        throw std::runtime_error("Can't initialize socket!");
     }
     std::cout << "\nConnect to SMTP server>> Socket was initialized" << std::endl;
 
@@ -121,13 +123,13 @@ int SmtpClient::connectToSMTPServer(const char* smtpHostName, const short smtpPo
 
     if ( (arg = fcntl(socketFd, F_GETFL, nullptr)) < 0 ) {
         std::cerr << "Error fcntl(..., F_GETFL): " << strerror(errno) << std::endl;
-        return -1;
+        throw std::runtime_error(std::string("Error fcntl(..., F_GETFL): ").append(strerror(errno)));
     }
 
     arg |= O_NONBLOCK;
     if (fcntl(socketFd, F_SETFL, arg) < 0) {
         std::cerr << "Error fcntl(..., F_SETFL): " << strerror(errno) << std::endl;
-        return -1;
+        throw std::runtime_error(std::string("Error fcntl(..., F_SETFL): ").append(strerror(errno)));
     }
 
     if (connect(socketFd, reinterpret_cast<sockaddr*>(&smtpAddr), sizeof(sockaddr)) < 0) {
@@ -141,39 +143,39 @@ int SmtpClient::connectToSMTPServer(const char* smtpHostName, const short smtpPo
                 auto result = select(socketFd+1, nullptr, &setOfConnections, nullptr, &tv);
                 if (result < 0 && errno != EINTR) {
                     std::cerr << "Error connecting " << errno << " - " << strerror(errno) << std::endl;
-                    return -1;
+                    throw std::runtime_error(std::string("Error connecting: ").append(strerror(errno)));
                 } else if (result > 0) {
                     len = sizeof(int);
                     if (getsockopt(socketFd, SOL_SOCKET, SO_ERROR, reinterpret_cast<void*>(&valopt), &len) < 0) {
                         std::cerr << "Error in getsockopt() " << errno << " - " << strerror(errno) << std::endl;
-                        return -1;
+                        throw std::runtime_error(std::string("Error in getsockopt(): ").append(strerror(errno)));
                     }
 
                     if (valopt) {
                         std::cerr << "Error in delayed connection() " << valopt << " - " << strerror(valopt) << std::endl;
-                        return -1;
+                        throw std::runtime_error(std::string("Error in delayed connection(): ").append(strerror(errno)));
                     }
                     break;
                 } else {
                     std::cerr << "Timout in select was cancelling!" << std::endl;
                     std::cerr << "Check it with normal connection" << std::endl;
-                    return -1;
+                    throw std::runtime_error("Timout is select was cancelling!");
                 }
             } while(1);
         } else {
             std::cerr << "Error connection " << errno << " - " << strerror(errno) << std::endl;
-            return -1;
+            throw std::runtime_error(std::string("Error connection: ").append(strerror(errno)));
         }
     }
 
     if ( (arg = fcntl(socketFd, F_GETFL, nullptr)) < 0 ) {
         std::cerr << "Error fcntl(..., F_GETFL)2: " << strerror(errno) << std::endl;
-        return -1;
+        throw std::runtime_error(std::string("Error fcntl(..., F_GETFL): ").append(strerror(errno)));
     }
     arg &= (~O_NONBLOCK);
     if (fcntl(socketFd, F_SETFL, arg) < 0) {
         std::cerr << "Error fcntl(..., F_SETFL)2: " << strerror(errno) << std::endl;
-        return -1;
+        throw std::runtime_error(std::string("Error fcntl(..., F_SETFL): ").append(strerror(errno)));
     }
 
 //    connect() without timeout
@@ -196,8 +198,8 @@ int SmtpClient::connectToSMTPServer(const char* smtpHostName, const short smtpPo
     if (!ssl) {
         close(socketFd);
         socketFd = -1;
-        std::cerr << "Error of SSL connection!" << std::endl;
-        return -1;
+        std::cerr << "Error of creating SSL struct!" << std::endl;
+        throw std::runtime_error("Error of creating SSL struct!");
     }
     std::cout << "Connect to SMTP server>> SSL was created" << std::endl;
 
@@ -205,12 +207,12 @@ int SmtpClient::connectToSMTPServer(const char* smtpHostName, const short smtpPo
     SSL_set_fd(ssl, socketFd);
 
     if(SSL_connect(ssl) < 0) {
-        std::cerr << "Error creating SSL connection!" << std::endl;
+        std::cerr << "Error of SSL connection!" << std::endl;
         SSL_free(ssl);
         ssl = nullptr;
         close(socketFd);
         socketFd = -1;
-        return -1;
+        throw std::runtime_error("Error of SSL connection!");
     }
     std::cout << "Connect to SMTP server>> SSL connection was created" << std::endl;
 
