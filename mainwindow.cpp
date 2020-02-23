@@ -2,7 +2,11 @@
 #include "LoginDialog/userdata.h"
 #include "ui_main.h"
 #include "ui_mainwindow.h"
+#include "data.h"
+
 #include <QDebug>
+
+#include <iostream>
 
 MainWindow::MainWindow(QWidget* parent) :
     QMainWindow(parent),
@@ -10,10 +14,12 @@ MainWindow::MainWindow(QWidget* parent) :
     pop3Client(new POP3Client()),
     smtpClient(new SmtpClient()) {
     ui->setupUi(this);
+    this->show();
 
     auto user = getUserInfo(this);
 
-    connectToMailBox(user);
+    connectToMailBox(getTestUser());
+    showLetters();
 }
 
 MainWindow::~MainWindow() {
@@ -61,7 +67,9 @@ void MainWindow::connectToMailBox(const UserData& user) {
     }
 
     if (!connectToSmtpUser(user.email, user.password)) {
-
+        ui->statusBar->showMessage("Can't auth user (SMTP)");
+    } else {
+        ui->statusBar->showMessage("User was authenticated (SMTP)", ui->_5_SECONDS_IN_MS);
     }
 }
 
@@ -124,6 +132,42 @@ bool MainWindow::connectToSmtpUser(const QString &email, const QString &password
         return true;
     }
     return false;
+}
+
+void MainWindow::showLetters() {
+    if (status.pop3Connection) {
+        char* response = pop3Client->sendRequest("LIST\r\n");
+        if (isPop3ResponseCorrect(response)) {
+            std::string strResponse(response);
+            delete[] response;
+            size_t startPos = 4;
+            size_t endPos;
+            for (endPos = 0; endPos < strResponse.size(); ++endPos) {
+                if (strResponse[endPos] == ' ') {
+                    break;
+                }
+            }
+            if (endPos == strResponse.size() - 1) {
+                ui->statusBar->showMessage("Wrong response from server");
+                return;
+            }
+            auto numOfLetters = std::atoi(strResponse.substr(startPos, endPos-1).c_str());
+            for (int i = 1; i <= numOfLetters; i++) {
+                response = pop3Client->sendRequest(std::string("RETR ")
+                                                   .append(std::to_string(i))
+                                                   .append("\r\n"));
+                std::string responseStr(response);
+                delete[] response;
+                std::string::size_type subjectBeginPos = responseStr.find("\r\nSubject: ") + lenOfSubjectStr;
+                std::string::size_type subjectEndPos = responseStr.find("\r\nTo:", subjectBeginPos);
+                std::cout << "\t";
+                for (std::string::size_type i = subjectBeginPos; i < subjectEndPos; ++i) {
+                    std::cout << responseStr[i];
+                }
+                std::cout << std::endl;
+            }
+        }
+    }
 }
 
 bool isPop3ResponseCorrect(const QString& response) {
