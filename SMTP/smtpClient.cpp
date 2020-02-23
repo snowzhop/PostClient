@@ -91,14 +91,14 @@ ssize_t SmtpClient::recvData(char* data, size_t size) {
     return len;
 }
 
-int SmtpClient::connectToSMTPServer(const char* smtpHostName, const short smtpPort) {
+void SmtpClient::connectToSMTPServer(const char* smtpHostName, const short smtpPort) {
     sockaddr_in smtpAddr;
     hostent *host = nullptr;
 
     if (!(host = gethostbyname(smtpHostName))) {
         std::cerr << "Can't resolve hostname " << smtpHostName << std::endl;
 //        return -1;
-        throw std::runtime_error(std::string("Can't resolve hostname ").append(smtpHostName));
+        throw std::runtime_error(std::string("SMTP connect: Can't resolve hostname ").append(smtpHostName));
     }
 
     memset(&smtpAddr, 0, sizeof(smtpAddr));
@@ -111,7 +111,7 @@ int SmtpClient::connectToSMTPServer(const char* smtpHostName, const short smtpPo
     if (socketFd < 0) {
         std::cerr << "Can't initialize socket!" << std::endl;
 //        return -1;
-        throw std::runtime_error("Can't initialize socket!");
+        throw std::runtime_error("SMTP connect: Can't initialize socket!");
     }
     std::cout << "\nConnect to SMTP server>> Socket was initialized" << std::endl;
 
@@ -123,13 +123,13 @@ int SmtpClient::connectToSMTPServer(const char* smtpHostName, const short smtpPo
 
     if ( (arg = fcntl(socketFd, F_GETFL, nullptr)) < 0 ) {
         std::cerr << "Error fcntl(..., F_GETFL): " << strerror(errno) << std::endl;
-        throw std::runtime_error(std::string("Error fcntl(..., F_GETFL): ").append(strerror(errno)));
+        throw std::runtime_error(std::string("SMTP connect: Error fcntl(..., F_GETFL): ").append(strerror(errno)));
     }
 
     arg |= O_NONBLOCK;
     if (fcntl(socketFd, F_SETFL, arg) < 0) {
         std::cerr << "Error fcntl(..., F_SETFL): " << strerror(errno) << std::endl;
-        throw std::runtime_error(std::string("Error fcntl(..., F_SETFL): ").append(strerror(errno)));
+        throw std::runtime_error(std::string("SMTP connect: Error fcntl(..., F_SETFL): ").append(strerror(errno)));
     }
 
     if (connect(socketFd, reinterpret_cast<sockaddr*>(&smtpAddr), sizeof(sockaddr)) < 0) {
@@ -143,39 +143,39 @@ int SmtpClient::connectToSMTPServer(const char* smtpHostName, const short smtpPo
                 auto result = select(socketFd+1, nullptr, &setOfConnections, nullptr, &tv);
                 if (result < 0 && errno != EINTR) {
                     std::cerr << "Error connecting " << errno << " - " << strerror(errno) << std::endl;
-                    throw std::runtime_error(std::string("Error connecting: ").append(strerror(errno)));
+                    throw std::runtime_error(std::string("SMTP connect: Error connecting: ").append(strerror(errno)));
                 } else if (result > 0) {
                     len = sizeof(int);
                     if (getsockopt(socketFd, SOL_SOCKET, SO_ERROR, reinterpret_cast<void*>(&valopt), &len) < 0) {
                         std::cerr << "Error in getsockopt() " << errno << " - " << strerror(errno) << std::endl;
-                        throw std::runtime_error(std::string("Error in getsockopt(): ").append(strerror(errno)));
+                        throw std::runtime_error(std::string("SMTP connect: Error in getsockopt(): ").append(strerror(errno)));
                     }
 
                     if (valopt) {
                         std::cerr << "Error in delayed connection() " << valopt << " - " << strerror(valopt) << std::endl;
-                        throw std::runtime_error(std::string("Error in delayed connection(): ").append(strerror(errno)));
+                        throw std::runtime_error(std::string("SMTP connect: Error in delayed connection(): ").append(strerror(errno)));
                     }
                     break;
                 } else {
                     std::cerr << "Timout in select was cancelling!" << std::endl;
                     std::cerr << "Check it with normal connection" << std::endl;
-                    throw std::runtime_error("Timout is select was cancelling!");
+                    throw std::runtime_error("SMTP connect: Timout in select was cancelling!");
                 }
             } while(1);
         } else {
             std::cerr << "Error connection " << errno << " - " << strerror(errno) << std::endl;
-            throw std::runtime_error(std::string("Error connection: ").append(strerror(errno)));
+            throw std::runtime_error(std::string("SMTP connect: Error connection: ").append(strerror(errno)));
         }
     }
 
     if ( (arg = fcntl(socketFd, F_GETFL, nullptr)) < 0 ) {
         std::cerr << "Error fcntl(..., F_GETFL)2: " << strerror(errno) << std::endl;
-        throw std::runtime_error(std::string("Error fcntl(..., F_GETFL): ").append(strerror(errno)));
+        throw std::runtime_error(std::string("SMTP connect: Error fcntl(..., F_GETFL): ").append(strerror(errno)));
     }
     arg &= (~O_NONBLOCK);
     if (fcntl(socketFd, F_SETFL, arg) < 0) {
         std::cerr << "Error fcntl(..., F_SETFL)2: " << strerror(errno) << std::endl;
-        throw std::runtime_error(std::string("Error fcntl(..., F_SETFL): ").append(strerror(errno)));
+        throw std::runtime_error(std::string("SMTP connect: Error fcntl(..., F_SETFL): ").append(strerror(errno)));
     }
 
 //    connect() without timeout
@@ -199,7 +199,7 @@ int SmtpClient::connectToSMTPServer(const char* smtpHostName, const short smtpPo
         close(socketFd);
         socketFd = -1;
         std::cerr << "Error of creating SSL struct!" << std::endl;
-        throw std::runtime_error("Error of creating SSL struct!");
+        throw std::runtime_error("SMTP connect: Error of creating SSL struct!");
     }
     std::cout << "Connect to SMTP server>> SSL was created" << std::endl;
 
@@ -212,14 +212,14 @@ int SmtpClient::connectToSMTPServer(const char* smtpHostName, const short smtpPo
         ssl = nullptr;
         close(socketFd);
         socketFd = -1;
-        throw std::runtime_error("Error of SSL connection!");
+        throw std::runtime_error("SMTP connect: Error of SSL connection!");
     }
     std::cout << "Connect to SMTP server>> SSL connection was created" << std::endl;
 
-    return 0;
+//    return 0;
 }
 
-int SmtpClient::login(const char* smtpLogin, const char* smtpPassword) {
+void SmtpClient::login(const char* smtpLogin, const char* smtpPassword) {
     char readData[SMTP_MTU];
     char writeData[SMTP_MTU];
 
@@ -234,7 +234,7 @@ int SmtpClient::login(const char* smtpLogin, const char* smtpPassword) {
     memset(&readData, 0, SMTP_MTU);
     recvData(readData, SMTP_MTU);
     if (recvStatus(readData) < 0) {
-        return -1;
+        throw std::runtime_error("SMTP login: Message receiving error");
     }
     std::cout << "login>> " << readData << std::endl;
 
@@ -245,7 +245,7 @@ int SmtpClient::login(const char* smtpLogin, const char* smtpPassword) {
     memset(&readData, 0, SMTP_MTU);
     recvData(readData, SMTP_MTU);
     if (recvStatus(readData) < 0) {
-        return -1;
+        throw std::runtime_error("SMTP login: Message receiving error");
     }
     std::cout << "login>> " << readData << std::endl;
 
@@ -262,7 +262,7 @@ int SmtpClient::login(const char* smtpLogin, const char* smtpPassword) {
     memset(&readData, 0, SMTP_MTU);
     recvData(readData, SMTP_MTU);
     if (recvStatus(readData) < 0) {
-        return -1;
+        throw std::runtime_error("SMTP login: Message receiving error");
     }
     std::cout << "login>> " << readData << std::endl;
 
@@ -279,14 +279,14 @@ int SmtpClient::login(const char* smtpLogin, const char* smtpPassword) {
     memset(&readData, 0, SMTP_MTU);
     recvData(readData, SMTP_MTU);
     if (recvStatus(readData) < 0) {
-        return -1;
+        throw std::runtime_error("SMTP login: Message receiving error");
     }
     std::cout << "login>> " << readData << std::endl;
 
     strcpy(this->username, smtpLogin);
     strcpy(this->password, smtpPassword);
 
-    return 0;
+//    return 0;
 }
 
 size_t SmtpClient::createLetter(const char* toMail,
