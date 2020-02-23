@@ -10,6 +10,13 @@ namespace Ui {
 class MainWindow;
 }
 
+struct Status {
+    bool pop3Connection = false;
+    bool pop3UserAuth   = false;
+    bool smtpConnection = false;
+    bool smtpUserAuth   = false;
+};
+
 class Ui_Main;
 
 class MainWindow : public QMainWindow {
@@ -20,16 +27,23 @@ public:
     ~MainWindow();
 
 private:
-    bool connectToPop3Server();
+    void connectToMailBox(const UserData& user);
+
+    bool connectToPop3Server(const QString& serverAddr, const QString& serverPort);
+    bool connectToPop3User(const QString& email, const QString& password);
+    int getListOfLetters();
+
+    bool connectToSmtpServer(const QString& serverAddr, const QString& serverPort);
+    bool connectToSmtpUser(const QString& email, const QString& password);
+    void sendLetter();
 
     Ui_Main *ui;
     POP3Client* pop3Client = nullptr;
     SmtpClient* smtpClient = nullptr;
-    bool pop3UserConnectionStatus = false;
-    bool smtpUserConnectionStatus = false;
+    Status status;
 };
 
 UserData getUserInfo(QMainWindow* w);
-bool checkPop3Response(const QString& response);
+bool isPop3ResponseCorrect(const QString& response);
 
 #endif // MAINWINDOW_H
