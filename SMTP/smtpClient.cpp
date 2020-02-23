@@ -1,6 +1,8 @@
 #include <netinet/in.h>
 #include <netdb.h>
 
+#include <fcntl.h>
+
 #include <iostream>
 #include <fstream>
 #include <unistd.h>
@@ -111,12 +113,76 @@ int SmtpClient::connectToSMTPServer(const char* smtpHostName, const short smtpPo
     }
     std::cout << "\nConnect to SMTP server>> Socket was initialized" << std::endl;
 
-    if (connect(socketFd, reinterpret_cast<sockaddr*>(&smtpAddr), sizeof(sockaddr)) < 0) {
-        close(socketFd);
-        socketFd = -1;
-        std::cerr << "Can't connect to host " << smtpHostName << ":" << smtpPort << std::endl;
+    long arg = 0;
+    fd_set setOfConnections;
+    timeval tv;
+    int valopt;
+    socklen_t len = 0;
+
+    if ( (arg = fcntl(socketFd, F_GETFL, nullptr)) < 0 ) {
+        std::cerr << "Error fcntl(..., F_GETFL): " << strerror(errno) << std::endl;
         return -1;
     }
+
+    arg |= O_NONBLOCK;
+    if (fcntl(socketFd, F_SETFL, arg) < 0) {
+        std::cerr << "Error fcntl(..., F_SETFL): " << strerror(errno) << std::endl;
+        return -1;
+    }
+
+    if (connect(socketFd, reinterpret_cast<sockaddr*>(&smtpAddr), sizeof(sockaddr)) < 0) {
+        if (errno == EINPROGRESS) {
+            std::cout << "EINPROGRESS in connect() - selecting" << std::endl;
+            do {
+                tv.tv_sec = 7;
+                tv.tv_usec = 0;
+                FD_ZERO(&setOfConnections);
+                FD_SET(socketFd, &setOfConnections);
+                auto result = select(socketFd+1, nullptr, &setOfConnections, nullptr, &tv);
+                if (result < 0 && errno != EINTR) {
+                    std::cerr << "Error connecting " << errno << " - " << strerror(errno) << std::endl;
+                    return -1;
+                } else if (result > 0) {
+                    len = sizeof(int);
+                    if (getsockopt(socketFd, SOL_SOCKET, SO_ERROR, reinterpret_cast<void*>(&valopt), &len) < 0) {
+                        std::cerr << "Error in getsockopt() " << errno << " - " << strerror(errno) << std::endl;
+                        return -1;
+                    }
+
+                    if (valopt) {
+                        std::cerr << "Error in delayed connection() " << valopt << " - " << strerror(valopt) << std::endl;
+                        return -1;
+                    }
+                    break;
+                } else {
+                    std::cerr << "Timout in select was cancelling!" << std::endl;
+                    std::cerr << "Check it with normal connection" << std::endl;
+                    return -1;
+                }
+            } while(1);
+        } else {
+            std::cerr << "Error connection " << errno << " - " << strerror(errno) << std::endl;
+            return -1;
+        }
+    }
+
+    if ( (arg = fcntl(socketFd, F_GETFL, nullptr)) < 0 ) {
+        std::cerr << "Error fcntl(..., F_GETFL)2: " << strerror(errno) << std::endl;
+        return -1;
+    }
+    arg &= (~O_NONBLOCK);
+    if (fcntl(socketFd, F_SETFL, arg) < 0) {
+        std::cerr << "Error fcntl(..., F_SETFL)2: " << strerror(errno) << std::endl;
+        return -1;
+    }
+
+//    connect() without timeout
+//    if (connect(socketFd, reinterpret_cast<sockaddr*>(&smtpAddr), sizeof(sockaddr)) < 0) {
+//        close(socketFd);
+//        socketFd = -1;
+//        std::cerr << "Can't connect to host " << smtpHostName << ":" << smtpPort << std::endl;
+//        return -1;
+//    }
     std::cout << "Connect to SMTP server>> Connected to host" << std::endl;
 
     const SSL_METHOD *method = nullptr;
