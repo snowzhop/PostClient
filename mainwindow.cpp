@@ -1,10 +1,14 @@
 #include "mainwindow.h"
 #include "LoginDialog/userdata.h"
+#include "Base64/base64util.h"
 #include "ui_main.h"
 #include "ui_mainwindow.h"
 #include "data.h"
 
 #include <QDebug>
+#include <cstring>
+#include <QFile>
+#include <QStandardPaths>
 
 #include <iostream>
 
@@ -13,6 +17,7 @@ MainWindow::MainWindow(QWidget* parent) :
     ui(new Ui_Main),
     pop3Client(new POP3Client()),
     smtpClient(new SmtpClient()) {
+
     ui->setupUi(this);
     this->show();
 
@@ -26,21 +31,6 @@ MainWindow::~MainWindow() {
     delete ui;
     delete pop3Client;
     delete smtpClient;
-}
-
-UserData getUserInfo(QMainWindow* w) {
-    LoginDialog loginDialog(w);
-    loginDialog.setModal(true);
-
-    UserData user;
-    QObject::connect(&loginDialog, &LoginDialog::fieldsSaved,
-    [&user](const UserData& d) {
-        user = d;
-    });
-
-    loginDialog.exec();
-
-    return user;
 }
 
 void MainWindow::connectToMailBox(const UserData& user) {
@@ -152,22 +142,84 @@ void MainWindow::showLetters() {
                 return;
             }
             auto numOfLetters = std::atoi(strResponse.substr(startPos, endPos-1).c_str());
+            ui->tableWidget->setRowCount(numOfLetters);
+            ui->tableWidget->setColumnCount(1);
             for (int i = 1; i <= numOfLetters; i++) {
                 response = pop3Client->sendRequest(std::string("RETR ")
                                                    .append(std::to_string(i))
                                                    .append("\r\n"));
                 std::string responseStr(response);
                 delete[] response;
-                std::string::size_type subjectBeginPos = responseStr.find("\r\nSubject: ") + lenOfSubjectStr;
-                std::string::size_type subjectEndPos = responseStr.find("\r\nTo:", subjectBeginPos);
-                std::cout << "\t";
-                for (std::string::size_type i = subjectBeginPos; i < subjectEndPos; ++i) {
-                    std::cout << responseStr[i];
-                }
-                std::cout << std::endl;
+                std::cout << i << ". ";
+                auto* subject = findSubject(responseStr);
+                QTableWidgetItem* tableItem = new QTableWidgetItem(*subject);
+                tableItem->setFlags(tableItem->flags() ^ Qt::ItemIsEditable);
+                ui->tableWidget->setItem(i-2, 1, tableItem);
+                delete subject;
             }
+
         }
     }
+}
+
+void printStr(const std::string& str, size_t begin, size_t end) {
+    for (size_t i = begin; i <= end; ++i) {
+        std::cout << str[i];
+    }
+    std::cout.flush();
+}
+
+QString* findSubject(const std::string& letter) {
+    std::string::size_type subjectCurrentPos = letter.find("\r\nSubject: ") + std::strlen("\r\nSubject: ");
+
+    QString* result = new QString();
+
+    if (letter[subjectCurrentPos] == '=') {
+        while (true) {
+            ++subjectCurrentPos;
+            for (int i = 0; i < 3; ++i) {
+                subjectCurrentPos = letter.find("?", subjectCurrentPos) + 1;
+            }
+//            qDebug() << "\nletter[subjectCurrentPos-2] = " << letter[subjectCurrentPos-MainWindow::codingOffset] << "\n";
+//            if (letter[subjectCurrentPos-MainWindow::codingOffset] == 'b' || letter[subjectCurrentPos-MainWindow::codingOffset] == 'B') {
+            std::string::size_type subjectEndPos = letter.find("?", subjectCurrentPos);
+
+            std::string tmpRes(letter.substr(subjectCurrentPos, subjectEndPos - subjectCurrentPos));
+            std::cout << tmpRes << "|@|@|";
+            result->append(decodeBase64(tmpRes.c_str()));
+            subjectCurrentPos = subjectEndPos + 4;
+            if (letter[subjectCurrentPos] == ' ' &&
+                    letter[subjectCurrentPos-1] == '\n' &&
+                    letter[subjectCurrentPos-2] == '\r') {
+                continue;
+            } else {
+                break;
+            }
+        }
+
+    } else {
+        std::string::size_type subjectEndPos = letter.find("\r\n", subjectCurrentPos);
+        auto tmpRes = letter.substr(subjectCurrentPos, subjectEndPos - subjectCurrentPos).c_str();
+        std::cout << tmpRes;
+        result->append(tmpRes);
+    }
+    std::cout << std::endl;
+    return result;
+}
+
+UserData getUserInfo(QMainWindow* w) {
+    LoginDialog loginDialog(w);
+    loginDialog.setModal(true);
+
+    UserData user;
+    QObject::connect(&loginDialog, &LoginDialog::fieldsSaved,
+    [&user](const UserData& d) {
+        user = d;
+    });
+
+    loginDialog.exec();
+
+    return user;
 }
 
 bool isPop3ResponseCorrect(const QString& response) {

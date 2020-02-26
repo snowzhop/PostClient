@@ -39,6 +39,7 @@ public:
         toolBar->setMovable(false);
 
         QPushButton* testButton = new QPushButton();
+        testButton->setText("Тестовая");
         toolBar->addWidget(testButton);
 
         menuBar = new QMenuBar(mainWindow);

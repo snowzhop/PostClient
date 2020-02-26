@@ -26,6 +26,9 @@ public:
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
+    static const size_t lenOfSubjectStr = 10;
+    static const char codingOffset = 2;
+
 private:
     void connectToMailBox(const UserData& user);
 
@@ -43,9 +46,9 @@ private:
     SmtpClient* smtpClient = nullptr;
     Status status;
 
-    static const size_t lenOfSubjectStr = 10;
 };
 
+QString* findSubject(const std::string& letter);
 UserData getUserInfo(QMainWindow* w);
 bool isPop3ResponseCorrect(const QString& response);
 
