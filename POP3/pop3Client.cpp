@@ -232,6 +232,7 @@ int POP3Client::SSLReadMultiLine(char* buffer) {
 
     while (SSLReadChar(bufferChar)) {
         buffer[charCounter] = *bufferChar;
+//        TODO check bad server response
         if (charCounter > 3) {
             if (buffer[charCounter]     == '\n' &&  // 10
                     buffer[charCounter - 1] == '\r' &&  // 13
