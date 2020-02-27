@@ -25,12 +25,31 @@ MainWindow::MainWindow(QWidget* parent) :
 
     connectToMailBox(getTestUser());
     showLetters();
+
+    connect(ui->tableWidget, &QTableWidget::cellDoubleClicked, this, &MainWindow::showLetter);
 }
 
 MainWindow::~MainWindow() {
     delete ui;
     delete pop3Client;
     delete smtpClient;
+}
+
+void MainWindow::showLetter(const int& letterNumber) {
+    if (status.pop3UserAuth && status.pop3Connection) {
+        char* response = pop3Client->sendRequest(std::string("RETR ").
+                         append(std::to_string(letterNumber)).
+                         append("\r\n"));
+
+        QString strResponse(response);
+        delete[] response;
+        if (isPop3ResponseCorrect(strResponse)) {
+            auto boundaryBeginPos = strResponse.indexOf("boundary=\"");
+            auto boundaryEndPos = strResponse.indexOf("\"", boundaryBeginPos);
+            QStringRef boundary(&strResponse, boundaryBeginPos, boundaryEndPos - boundaryBeginPos);
+            qDebug() << "boundary = " << boundary;
+        }
+    }
 }
 
 void MainWindow::connectToMailBox(const UserData& user) {
@@ -181,12 +200,36 @@ QString* findSubject(const std::string& letter) {
                 subjectCurrentPos = letter.find("?", subjectCurrentPos) + 1;
             }
 //            qDebug() << "\nletter[subjectCurrentPos-2] = " << letter[subjectCurrentPos-MainWindow::codingOffset] << "\n";
-//            if (letter[subjectCurrentPos-MainWindow::codingOffset] == 'b' || letter[subjectCurrentPos-MainWindow::codingOffset] == 'B') {
             std::string::size_type subjectEndPos = letter.find("?", subjectCurrentPos);
+            std::string tmpSubject(letter.substr(subjectCurrentPos, subjectEndPos - subjectCurrentPos));
 
-            std::string tmpRes(letter.substr(subjectCurrentPos, subjectEndPos - subjectCurrentPos));
-            std::cout << tmpRes << "|@|@|";
-            result->append(decodeBase64(tmpRes.c_str()));
+            if (letter[subjectCurrentPos-MainWindow::codingOffset] == 'b' ||
+                    letter[subjectCurrentPos-MainWindow::codingOffset] == 'B') {
+                std::cout << tmpSubject << "|B|B|";
+                result->append(decodeBase64(tmpSubject.c_str()));
+            } else if (letter[subjectCurrentPos-MainWindow::codingOffset] == 'q' ||
+                       letter[subjectCurrentPos-MainWindow::codingOffset] == 'Q') {
+//                std::cout << tmpSubject << "|Q|Q|";
+                QByteArray tmpStr;
+                for (size_t i = 0; i < tmpSubject.length();) {
+                    if (tmpSubject[i] != '=') {
+                        if (tmpSubject[i] == '_') {
+                            std::cout << " ";
+                            result->append(QString(QByteArray::fromHex(tmpStr)));
+                            result->append(" ");
+                            tmpStr.clear();
+                        } else {
+                            std::cout << tmpSubject[i];
+                            tmpStr.append(tmpSubject[i]);
+                        }
+                    }
+                    ++i;
+                }
+                if (tmpStr.size() != 0) {
+                    result->append(QString(QByteArray::fromHex(tmpStr)));
+                }
+                std::cout << "|Q|Q|";
+            }
             subjectCurrentPos = subjectEndPos + 4;
             if (letter[subjectCurrentPos] == ' ' &&
                     letter[subjectCurrentPos-1] == '\n' &&
@@ -199,9 +242,9 @@ QString* findSubject(const std::string& letter) {
 
     } else {
         std::string::size_type subjectEndPos = letter.find("\r\n", subjectCurrentPos);
-        auto tmpRes = letter.substr(subjectCurrentPos, subjectEndPos - subjectCurrentPos).c_str();
-        std::cout << tmpRes;
-        result->append(tmpRes);
+        auto tmpSubject = letter.substr(subjectCurrentPos, subjectEndPos - subjectCurrentPos).c_str();
+        std::cout << tmpSubject;
+        result->append(tmpSubject);
     }
     std::cout << std::endl;
     return result;
