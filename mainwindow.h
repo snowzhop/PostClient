@@ -29,6 +29,9 @@ public:
     static const size_t lenOfSubjectStr = 10;
     static const char codingOffset = 2;
 
+public slots:
+    void showLetter(const int& letterNumber);
+
 private:
     void connectToMailBox(const UserData& user);
 
