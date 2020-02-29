@@ -229,17 +229,28 @@ bool POP3Client::SSLReadChar(char* ch) {
 int POP3Client::SSLReadMultiLine(char* buffer) {
     char* bufferChar = new char;
     int charCounter = 0;
+    bool errorState = false;
 
     while (SSLReadChar(bufferChar)) {
         buffer[charCounter] = *bufferChar;
-//        TODO check bad server response
+        if (charCounter == 1) {
+            if (buffer[0] == '-') {
+                errorState = true;
+            }
+        }
         if (charCounter > 3) {
-            if (buffer[charCounter]     == '\n' &&  // 10
-                    buffer[charCounter - 1] == '\r' &&  // 13
-                    buffer[charCounter - 2] == '.'  &&
-                    buffer[charCounter - 3] == '\n' &&
-                    buffer[charCounter - 4] == '\r') {   // 46
-                break;
+            if (!errorState) {
+                if (buffer[charCounter]     == '\n' &&  // 10
+                        buffer[charCounter - 1] == '\r' &&  // 13
+                        buffer[charCounter - 2] == '.'  &&
+                        buffer[charCounter - 3] == '\n' &&
+                        buffer[charCounter - 4] == '\r') {   // 46
+                    break;
+                }
+            } else {
+                if (buffer[charCounter] == '\n' && buffer[charCounter-1] == '\r') {
+                    break;
+                }
             }
         }
         charCounter++;
