@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui
+QT       += core gui webenginewidgets
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -30,17 +30,21 @@ CONFIG += c++17
 
 SOURCES += \
         Base64/base64util.cpp \
+        LetterDialog/letterdialog.cpp \
         LoginDialog/logindialog.cpp \
         POP3/pop3Client.cpp \
+        PostClient/PostClient.cpp \
         SMTP/smtpClient.cpp \
         main.cpp \
         mainwindow.cpp
 
 HEADERS += \
         Base64/base64util.h \
+        LetterDialog/letterdialog.h \
         LoginDialog/logindialog.h \
         LoginDialog/userdata.h \
         POP3/pop3Client.h \
+        PostClient/PostClient.h \
         SMTP/smtpClient.h \
         data.h \
         mainwindow.h \
