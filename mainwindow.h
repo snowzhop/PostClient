@@ -10,7 +10,7 @@ namespace Ui {
 class MainWindow;
 }
 
-struct Status {
+struct ConnectionStatus {
     bool pop3Connection = false;
     bool pop3UserAuth   = false;
     bool smtpConnection = false;
@@ -47,12 +47,8 @@ private:
     Ui_Main *ui;
     POP3Client* pop3Client = nullptr;
     SmtpClient* smtpClient = nullptr;
-    Status status;
+    ConnectionStatus connectionStatus;
 
 };
-
-QString* findSubject(const std::string& letter);
-UserData getUserInfo(QMainWindow* w);
-bool isPop3ResponseCorrect(const QString& response);
 
 #endif // MAINWINDOW_H
