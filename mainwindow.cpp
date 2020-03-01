@@ -2,6 +2,7 @@
 #include "LoginDialog/userdata.h"
 #include "LetterDialog/letterdialog.h"
 #include "Base64/base64util.h"
+#include "PostClient/PostClient.h"
 #include "ui_main.h"
 #include "ui_mainwindow.h"
 #include "data.h"
@@ -39,21 +40,21 @@ MainWindow::~MainWindow() {
 void MainWindow::showLetter(const int& letterNumber) {
     if (connectionStatus.pop3UserAuth && connectionStatus.pop3Connection) {
         LetterDialog* letterDialog = new LetterDialog(this);
-        letterDialog->showLetter(*pop3Client, letterNumber);
-        char* response = pop3Client->sendRequest(std::string("RETR ").
-                         append(std::to_string(letterNumber)).
-                         append("\r\n"));
+        letterDialog->showLetter(*pop3Client, letterNumber + 1);
+//        char* response = pop3Client->sendRequest(std::string("RETR ").
+//                         append(std::to_string(letterNumber)).
+//                         append("\r\n"));
 
-        QString strResponse(response);
-        delete[] response;
-        if (PostClient::isPop3ResponseCorrect(strResponse)) {
-            auto boundaryBeginPos = strResponse.indexOf("boundary=\"");         // Return value can be -1
-            auto boundaryEndPos = strResponse.indexOf("\"", boundaryBeginPos);  // Return value can be -1
-            QStringRef boundary(&strResponse, boundaryBeginPos, boundaryEndPos - boundaryBeginPos);
-            qDebug() << "boundary = " << boundary
-                     << "\tbegin = " << boundaryBeginPos
-                     << "\tend = " << boundaryEndPos;
-        }
+//        QString strResponse(response);
+//        delete[] response;
+//        if (PostClient::isPop3ResponseCorrect(strResponse)) {
+//            auto boundaryBeginPos = strResponse.indexOf("boundary=\"");         // Return value can be -1
+//            auto boundaryEndPos = strResponse.indexOf("\"", boundaryBeginPos);  // Return value can be -1
+//            QStringRef boundary(&strResponse, boundaryBeginPos, boundaryEndPos - boundaryBeginPos);
+//            qDebug() << "boundary = " << boundary
+//                     << "\tbegin = " << boundaryBeginPos
+//                     << "\tend = " << boundaryEndPos;
+//        }
     } else {
         ui->statusBar->showMessage("POP3 connection closed");
     }
@@ -174,14 +175,19 @@ void MainWindow::showLetters() {
                 response = pop3Client->sendRequest(std::string("RETR ")
                                                    .append(std::to_string(i))
                                                    .append("\r\n"));
-                std::string responseStr(response);
-                delete[] response;
-                std::cout << i << ". ";
-                auto* subject = PostClient::findSubject(responseStr);
-                QTableWidgetItem* tableItem = new QTableWidgetItem(*subject);
-                tableItem->setFlags(tableItem->flags() ^ Qt::ItemIsEditable);
-                ui->tableWidget->setItem(i-2, 1, tableItem);
-                delete subject;
+                if (PostClient::isPop3ResponseCorrect(QString(response))) {
+                    std::string responseStr(response);
+                    delete[] response;
+                    std::cout << i << ". ";
+                    auto* subject = PostClient::findSubject(responseStr);
+                    QTableWidgetItem* tableItem = new QTableWidgetItem(*subject);
+                    tableItem->setFlags(tableItem->flags() ^ Qt::ItemIsEditable);
+                    ui->tableWidget->setItem(i-2, 1, tableItem);
+                    delete subject;
+                } else {
+                    qDebug() << "Error response: " << response;
+                    ui->statusBar->showMessage(QString(response));
+                }
             }
         }
     }

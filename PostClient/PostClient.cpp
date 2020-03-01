@@ -6,6 +6,8 @@
 #include <iostream>
 #include <cstring>
 
+namespace PostClient {
+
 QString* findSubject(const std::string& letter) {
     std::string::size_type subjectCurrentPos = letter.find("\r\nSubject: ") + std::strlen("\r\nSubject: ");
 
@@ -91,4 +93,6 @@ bool isPop3ResponseCorrect(const QString& response) {
         }
     }
     return false;
+}
+
 }

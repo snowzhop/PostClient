@@ -47,6 +47,7 @@ private:
     Ui_Main *ui;
     POP3Client* pop3Client = nullptr;
     SmtpClient* smtpClient = nullptr;
+
     ConnectionStatus connectionStatus;
 
 };

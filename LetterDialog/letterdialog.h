@@ -1,12 +1,12 @@
 #ifndef LETTERDIALOG_H
 #define LETTERDIALOG_H
 
-#include "POP3/pop3Client.h"
-
 #include <QDialog>
 #include <QMainWindow>
 #include <QLineEdit>
 #include <QWebEngineView>
+
+class POP3Client;
 
 class LetterDialog : public QMainWindow {
     Q_OBJECT
@@ -17,6 +17,7 @@ public:
     void showLetter(POP3Client& pop3Client, const int& letterNumber);
 
 private:
+    QWidget* centralWidget = nullptr;
     QLineEdit* dateLine = nullptr;
     QLineEdit* fromLine = nullptr;
 
