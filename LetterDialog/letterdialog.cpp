@@ -11,6 +11,7 @@
 #include <QDebug>
 #include <QStack>
 #include <QTextEdit>
+#include <QPushButton>
 
 #include <QFile>
 #include <QTextStream>
@@ -22,7 +23,8 @@ LetterDialog::LetterDialog(QWidget* parent) :
     QMainWindow (parent),
     centralWidget(new QWidget(this)),
     dateLine(new QLineEdit(this)),
-    fromLine(new QLineEdit(this)) {
+    fromLine(new QLineEdit(this)),
+    toolBar(new QToolBar(centralWidget)) {
 
     this->setCentralWidget(centralWidget);
     this->setAttribute(Qt::WA_DeleteOnClose);
@@ -48,6 +50,12 @@ LetterDialog::LetterDialog(QWidget* parent) :
     dataLayout->addLayout(dateLayout);
     dataLayout->setSizeConstraint(QLayout::SetFixedSize);
 
+    toolBar->setMovable(false);
+    replyButton = new QPushButton("reply", toolBar);
+    toolBar->addWidget(replyButton);
+    toolBar->addSeparator();
+    this->addToolBar(Qt::LeftToolBarArea, toolBar);
+
     mainLayout->addLayout(dataLayout);
     this->setMinimumSize(700, 500);
 }
@@ -55,6 +63,8 @@ LetterDialog::LetterDialog(QWidget* parent) :
 LetterDialog::~LetterDialog() {
     delete dateLine;
     delete fromLine;
+    delete replyButton;
+    delete mainLayout;
 }
 
 void LetterDialog::showLetter(POP3Client& pop3Client, const int& letterNumber) {
@@ -198,13 +208,6 @@ void LetterDialog::showLetter(POP3Client& pop3Client, const int& letterNumber) {
                     qDebug() << "text/html";
                     result = letter.substr(0, letter.find("\r\n.\r\n"));
 
-
-                    QFile f("test-output");
-                    f.open(QIODevice::WriteOnly | QIODevice::Text);
-                    QTextStream s(&f);
-                    s << result.c_str();
-
-
                     mainLayout->addWidget(createWebView(result));
                 }
             } else {
@@ -212,6 +215,32 @@ void LetterDialog::showLetter(POP3Client& pop3Client, const int& letterNumber) {
                 view->setHtml(QString( letter.substr(0, letter.find("\r\n.\r\n")).c_str() ));
 
                 mainLayout->addWidget(view);
+            }
+
+        }
+
+        // Attachment
+
+        for (beginPos = letter.find("Content-Disposition: attachment");
+                beginPos != std::string::npos;
+                beginPos = letter.find("Content-Disposition: attachment", endPos)) {
+
+            beginPos = letter.find("filename=\"", beginPos) + std::strlen("filename=\"");
+            endPos = letter.find("\"", beginPos);
+            std::string filename = letter.substr(beginPos, endPos - beginPos);
+            if (filename[0] == '=') {
+                qDebug() << "Encoded filename";
+                size_t filenameBeginPos = 0;
+                for (int i = 0; i < 3; ++i) {
+                    filenameBeginPos = filename.find("?", filenameBeginPos);
+                    ++filenameBeginPos;
+                }
+                if (filename[filenameBeginPos-2] == 'B' || filename[filenameBeginPos-2] == 'b') {
+                    size_t filenameEndPos = filename.find("?=", filenameBeginPos);
+                    filename = QByteArray::fromBase64(filename.substr(filenameBeginPos, filenameEndPos - filenameBeginPos).c_str()).toStdString();
+                }
+            } else {
+                qDebug() << "Not encoded filename";
             }
 
         }
@@ -231,6 +260,14 @@ QTextEdit* LetterDialog::createTextEditView(const std::string &text) {
 QWebEngineView* LetterDialog::createWebView(const std::string &text) {
     QWebEngineView* result = new QWebEngineView(this);
     result->setHtml(text.c_str());
+    return result;
+}
+
+QPushButton* LetterDialog::createAttachmentPushButton(const std::string& filename) {
+    QPushButton* result = new QPushButton(filename.c_str(), this);
+
+
+
     return result;
 }
 

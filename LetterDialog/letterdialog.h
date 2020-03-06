@@ -7,6 +7,7 @@
 #include <QWebEngineView>
 #include <QVBoxLayout>
 #include <QTextEdit>
+#include <QToolBar>
 
 class POP3Client;
 
@@ -22,11 +23,14 @@ private:
     QWidget* centralWidget = nullptr;
     QLineEdit* dateLine = nullptr;
     QLineEdit* fromLine = nullptr;
+    QToolBar* toolBar = nullptr;
+    QPushButton* replyButton = nullptr;
 
     QVBoxLayout* mainLayout = nullptr;
 
     QTextEdit* createTextEditView(const std::string& text);
     QWebEngineView* createWebView(const std::string& text);
+    QPushButton* createAttachmentPushButton(const std::string& text);
 
     std::string getQuotedPrintableDecodedPlainLetter(const std::string& letter);
     std::string getQuotedPrintableDecodedHtmlLetter(const std::string& letter);
