@@ -31,19 +31,26 @@ QString* findSubject(const std::string& letter) {
                        letter[subjectCurrentPos-MainWindow::codingOffset] == 'Q') {
 //                std::cout << tmpSubject << "|Q|Q|";
                 QByteArray tmpStr;
-                for (size_t i = 0; i < tmpSubject.length();) {
-                    if (tmpSubject[i] != '=') {
+                bool encoded = false;
+                for (size_t i = 0; i < tmpSubject.length(); ++i) {
+                    if (encoded) {
                         if (tmpSubject[i] == '_') {
                             std::cout << " ";
                             result->append(QString(QByteArray::fromHex(tmpStr)));
                             result->append(" ");
                             tmpStr.clear();
+                            encoded = false;
                         } else {
                             std::cout << tmpSubject[i];
                             tmpStr.append(tmpSubject[i]);
                         }
+                    } else {
+                        if (tmpSubject[i] == '=') {
+                            encoded = true;
+                        } else {
+                            result->append(tmpSubject[i]);
+                        }
                     }
-                    ++i;
                 }
                 if (tmpStr.size() != 0) {
                     result->append(QString(QByteArray::fromHex(tmpStr)));
