@@ -9,6 +9,11 @@
 //#include <QWebEngineView>
 #include <QStringRef>
 #include <QDebug>
+#include <QStack>
+#include <QTextEdit>
+
+#include <QFile>
+#include <QTextStream>
 
 #include <cstring>
 #include <iostream>
@@ -17,8 +22,7 @@ LetterDialog::LetterDialog(QWidget* parent) :
     QMainWindow (parent),
     centralWidget(new QWidget(this)),
     dateLine(new QLineEdit(this)),
-    fromLine(new QLineEdit(this)),
-    webView(new QWebEngineView) {
+    fromLine(new QLineEdit(this)) {
 
     this->setCentralWidget(centralWidget);
     this->setAttribute(Qt::WA_DeleteOnClose);
@@ -29,7 +33,7 @@ LetterDialog::LetterDialog(QWidget* parent) :
     dateLine->setReadOnly(true);
     fromLine->setReadOnly(true);
 
-    QVBoxLayout* mainLayout     = new QVBoxLayout(centralWidget);
+    mainLayout                  = new QVBoxLayout(centralWidget);
     QVBoxLayout* dataLayout     = new QVBoxLayout();
     QHBoxLayout* dateLayout     = new QHBoxLayout();
     QHBoxLayout* fromLayout     = new QHBoxLayout();
@@ -45,15 +49,12 @@ LetterDialog::LetterDialog(QWidget* parent) :
     dataLayout->setSizeConstraint(QLayout::SetFixedSize);
 
     mainLayout->addLayout(dataLayout);
-    mainLayout->addWidget(webView);
-
-    webView->setHtml("Hello there");
+    this->setMinimumSize(700, 500);
 }
 
 LetterDialog::~LetterDialog() {
     delete dateLine;
     delete fromLine;
-    delete webView;
 }
 
 void LetterDialog::showLetter(POP3Client& pop3Client, const int& letterNumber) {
@@ -64,70 +65,153 @@ void LetterDialog::showLetter(POP3Client& pop3Client, const int& letterNumber) {
                                             append("\r\n"));
 
     if (PostClient::isPop3ResponseCorrect(QString(response))) {
-        std::string strResponse(response);
+        std::string* strResponse = new std::string(response);
         delete[] response;
 
-        auto beginPos = strResponse.find("Date: ") + 6;
-        auto endPos = strResponse.find("\r\n", beginPos);
+        auto endOfHeader = strResponse->find("\r\n\r\n");
+        std::string header = strResponse->substr(0, endOfHeader);
+        std::string letter = strResponse->substr(endOfHeader + 4);
+        delete strResponse;
 
-        dateLine->setText(QString(strResponse.substr(beginPos, endPos - beginPos).c_str()));
+        // Date parsing
+        auto beginPos = header.find("Date: ") + 6;
+        auto endPos = header.find("\r\n", beginPos);
 
-        beginPos = strResponse.find("From: ") + 6;
+        dateLine->setText(QString(header.substr(beginPos, endPos - beginPos).c_str()));
 
-        if (strResponse[beginPos] == '=') {
+        // "From" parsing
+        beginPos = header.find("From: ") + 6;
+
+        if (header[beginPos] == '=') {
             qDebug() << "Encoding";
             for (int i = 0; i < 3; ++i) {
-                beginPos = strResponse.find("?", beginPos) + 1;
+                beginPos = header.find("?", beginPos) + 1;
             }
-            auto endPos = strResponse.find("?", beginPos);
-            if (strResponse[beginPos - 2] == 'B' || strResponse[beginPos - 2] == 'b') {
+            auto endPos = header.find("?", beginPos);
+            if (header[beginPos - 2] == 'B' || header[beginPos - 2] == 'b') {
                 qDebug() << "Base64";
                 std::string result;
                 result.append(QByteArray::fromBase64(
-                                  strResponse.substr(beginPos, endPos - beginPos).c_str()));  // Added name
+                                  header.substr(beginPos, endPos - beginPos).c_str()));  // Added name
 
-                beginPos = strResponse.find("<", endPos) - 1;
-                endPos = strResponse.find(">", beginPos) + 1;
-                result.append(strResponse.substr(beginPos, endPos - beginPos).c_str());  // Added email
+                beginPos = header.find("<", endPos) - 1;
+                endPos = header.find(">", beginPos) + 1;
+                result.append(header.substr(beginPos, endPos - beginPos).c_str());  // Added email
 
                 fromLine->setText(QString(result.c_str()));
-            } else if (strResponse[beginPos - 1] == 'Q' || strResponse[beginPos - 1] == 'q') {
+            } else if (header[beginPos - 1] == 'Q' || header[beginPos - 1] == 'q') {
                 qDebug() << "Quoted-printable";
-                fromLine->setText(strResponse.substr(beginPos, endPos - beginPos).c_str());
+                fromLine->setText(header.substr(beginPos, endPos - beginPos).c_str());
             }
         } else {
-            auto endPos = strResponse.find("\r\n", beginPos);
-            fromLine->setText(QString(strResponse.substr(beginPos, endPos - beginPos).c_str()));
+            auto endPos = header.find("\r\n", beginPos);
+            fromLine->setText(QString(header.substr(beginPos, endPos - beginPos).c_str()));
         }
 
-        beginPos = strResponse.find("boundary=\"");
-        if (beginPos != std::string::npos) {
-            beginPos +=  + std::strlen("boundary=\"");
-            endPos = strResponse.find("\"", beginPos);
-            std::string boundaryStr = strResponse.substr(beginPos, endPos - beginPos);
-            qDebug() << "boundary = " << boundaryStr.c_str();
+        // Main letter parsing
+        beginPos = header.find("Content-Type: ") + std::strlen("Content-Type: ");
+        endPos = header.find("/", beginPos);
+        if (header.substr(beginPos, endPos - beginPos) == "multipart") {
+            qDebug() << "Multipart";
+
+            if ((beginPos = letter.find("Content-Type: text/html;")) != std::string::npos) {
+                beginPos = letter.find("Content-Transfer-Encoding: ", beginPos) + std::strlen("Content-Transfer-Encoding: ");
+                endPos = letter.find("\r\n", beginPos);
+                QString transferEncoding = QString(letter.substr(beginPos, endPos - beginPos).c_str()).toLower();
+
+                beginPos = letter.find("\r\n\r\n", beginPos) + 4;
+                endPos = letter.find("\r\n\r\n", beginPos);
+
+                if (transferEncoding == "base64") {
+                    qDebug() << "base64";
+
+                    auto* view = createWebView(QByteArray::fromBase64(
+                                                   letter.substr(beginPos, endPos - beginPos).c_str()).toStdString());
+
+                    mainLayout->addWidget(view);
+
+                } else if (transferEncoding == "quoted-printable") {
+                    qDebug() << "quoted-printable";
+
+                    mainLayout->addWidget(
+                        createWebView(
+                            getQuotedPrintableDecodedHtmlLetter(letter.substr(beginPos, endPos - beginPos))));
+
+                } else {
+                    qDebug() << "Without encoding";
+                    mainLayout->addWidget(createWebView(letter.substr(beginPos, endPos - beginPos)));
+                }
+            } else if ((beginPos = letter.find("Content-Type: text/plain;")) != std::string::npos) {
+                beginPos = letter.find("Content-Transfer-Encoding: ", beginPos) + std::strlen("Content-Transfer-Encoding: ");
+                endPos = letter.find("\r\n", beginPos);
+                QString transferEncoding = QString(letter.substr(beginPos, endPos - beginPos).c_str()).toLower();
+
+                beginPos = letter.find("\r\n\r\n", beginPos) + 4;
+                endPos = letter.find("\r\n\r\n", beginPos);
+
+                if (transferEncoding == "base64") {
+                    qDebug() << "base64";
+
+                    auto* view = createTextEditView(QByteArray::fromBase64(
+                                                        letter.substr(beginPos, endPos - beginPos).c_str()).toStdString());
+
+                    mainLayout->addWidget(view);
+                } else if (transferEncoding == "quoted-printable") {
+                    qDebug() << "quoted-printable";
+
+                    auto text = getQuotedPrintableDecodedPlainLetter(letter.substr(beginPos, endPos - beginPos));
+                    mainLayout->addWidget(createTextEditView(text));
+                } else {
+                    qDebug() << "Without encoding";
+
+                    mainLayout->addWidget(createTextEditView(letter.substr(beginPos, endPos - beginPos)));
+                }
+            }
 
         } else {
-            qDebug() << "Without boundary";
+            qDebug() << "Not multipart";
 
-            beginPos = strResponse.find("Content-Type: ") + std::strlen("Content-Type: ");
-            endPos = strResponse.find(";", beginPos);
-            auto contentType = strResponse.substr(beginPos, endPos - beginPos);
-            qDebug() << contentType.c_str();
+            beginPos = header.find("Content-Transfer-Encoding: ") + std::strlen("Content-Transfer-Encoding: ");
+            endPos = header.find("\r\n", beginPos);
+            QString transferEncoding = QString(header.substr(beginPos, endPos - beginPos).c_str()).toLower();
 
-            beginPos = strResponse.find("Content-Transfer-Encoding: ") + std::strlen("Content-Transfer-Encoding: ");
-            endPos = strResponse.find("\r\n", beginPos);
-            auto transferEncoding = strResponse.substr(beginPos, endPos - beginPos);
-
-            if (QString(transferEncoding.c_str()).toLower() == "quoted-printable") {
-                qDebug() << "quoted-printable";
-            } else if (QString(transferEncoding.c_str()).toLower() == "base64") {
+            if (transferEncoding == "base64") {
                 qDebug() << "base64";
+
+                if (header.find("Content-Type: text/plain") != std::string::npos) {
+                    qDebug() << "text/plain";
+                    mainLayout->addWidget(
+                        createTextEditView(
+                            std::string(QByteArray::fromBase64(letter.substr(0, letter.find("\r\n.\r\n")).c_str()))));
+
+                }
+            } else if (transferEncoding == "quoted-printable") {
+                qDebug() << "quoted-printable";
+                std::string result;
+
+                if (header.find("Content-Type: text/plain") != std::string::npos) {
+                    qDebug() << "text/plain";
+                    result = getQuotedPrintableDecodedPlainLetter(letter.substr(0, letter.find("\r\n.\r\n")));
+
+                    mainLayout->addWidget(createTextEditView(result));
+                } else {
+                    qDebug() << "text/html";
+                    result = letter.substr(0, letter.find("\r\n.\r\n"));
+
+
+                    QFile f("test-output");
+                    f.open(QIODevice::WriteOnly | QIODevice::Text);
+                    QTextStream s(&f);
+                    s << result.c_str();
+
+
+                    mainLayout->addWidget(createWebView(result));
+                }
             } else {
-                beginPos = strResponse.find("\r\n\r\n") + std::strlen("\r\n\r\n");
-                endPos = strResponse.find("\r\n.\r\n", beginPos);
-                auto result = strResponse.substr(beginPos, endPos - beginPos);
-                webView->setHtml(QString(result.c_str()));
+                QWebEngineView* view = new QWebEngineView(this);
+                view->setHtml(QString( letter.substr(0, letter.find("\r\n.\r\n")).c_str() ));
+
+                mainLayout->addWidget(view);
             }
 
         }
@@ -135,4 +219,67 @@ void LetterDialog::showLetter(POP3Client& pop3Client, const int& letterNumber) {
         qDebug() << "Error response: " << response;
         delete[] response;
     }
+}
+
+QTextEdit* LetterDialog::createTextEditView(const std::string &text) {
+    QTextEdit* result = new QTextEdit(this);
+    result->setText(text.c_str());
+    result->setReadOnly(true);
+    return result;
+}
+
+QWebEngineView* LetterDialog::createWebView(const std::string &text) {
+    QWebEngineView* result = new QWebEngineView(this);
+    result->setHtml(text.c_str());
+    return result;
+}
+
+std::string LetterDialog::getQuotedPrintableDecodedPlainLetter(const std::string& letter) {
+    std::string result;
+    QByteArray tmpStr;
+    for (size_t i = 0; i < letter.length();) {
+        if (letter[i] == '=') {
+            tmpStr.append(letter[++i]);
+            tmpStr.append(letter[++i]);
+            result.append(QByteArray::fromHex(tmpStr));
+            tmpStr.clear();
+        } else {
+            result.append(1, letter[i]);
+        }
+        ++i;
+    }
+    return result;
+}
+
+std::string LetterDialog::getQuotedPrintableDecodedHtmlLetter(const std::string& letter) {
+    std::string result = "";
+    QByteArray tmpStr;
+    bool encoding = [&letter]() {
+        return letter[0] != '<';
+    }
+    ();
+
+    for (size_t i = 0; i < letter.length();) {
+        if (encoding) {
+            if (letter[i] == '<') {
+                encoding = false;
+                result.append(1, letter[i]);
+            } else if (letter[i] == '=') {
+                tmpStr.append(letter[++i]);
+                tmpStr.append(letter[++i]);
+                result.append(QByteArray::fromHex(tmpStr));
+                tmpStr.clear();
+            } else {
+                result.append(1, letter[i]);
+            }
+        } else {
+            result.append(1, letter[i]);
+            if (letter[i] == '>') {
+                encoding = true;
+            }
+        }
+        ++i;
+    }
+
+    return result;
 }

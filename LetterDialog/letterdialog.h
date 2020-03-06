@@ -5,6 +5,8 @@
 #include <QMainWindow>
 #include <QLineEdit>
 #include <QWebEngineView>
+#include <QVBoxLayout>
+#include <QTextEdit>
 
 class POP3Client;
 
@@ -21,7 +23,14 @@ private:
     QLineEdit* dateLine = nullptr;
     QLineEdit* fromLine = nullptr;
 
-    QWebEngineView* webView = nullptr;
+    QVBoxLayout* mainLayout = nullptr;
+
+    QTextEdit* createTextEditView(const std::string& text);
+    QWebEngineView* createWebView(const std::string& text);
+
+    std::string getQuotedPrintableDecodedPlainLetter(const std::string& letter);
+    std::string getQuotedPrintableDecodedHtmlLetter(const std::string& letter);
 };
+
 
 #endif // LETTERDIALOG_H
