@@ -6,6 +6,8 @@
 #include <POP3/pop3Client.h>
 #include <LoginDialog/logindialog.h>
 
+class Ui_Main;
+
 namespace Ui {
 class MainWindow;
 }
@@ -15,9 +17,10 @@ struct ConnectionStatus {
     bool pop3UserAuth   = false;
     bool smtpConnection = false;
     bool smtpUserAuth   = false;
-};
 
-class Ui_Main;
+    std::string email;
+    std::string password;
+};
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -37,6 +40,7 @@ private:
 
     bool connectToPop3Server(const QString& serverAddr, const QString& serverPort);
     bool connectToPop3User(const QString& email, const QString& password);
+    bool closePop3Connection();
     void showLetters();
     int getListOfLetters();
 
@@ -49,6 +53,7 @@ private:
     SmtpClient* smtpClient = nullptr;
 
     ConnectionStatus connectionStatus;
+    std::vector<std::string> letterBox;
 
 };
 

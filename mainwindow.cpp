@@ -7,10 +7,11 @@
 #include "ui_mainwindow.h"
 #include "data.h"
 
+#include <QTimer>
+
 #include <QDebug>
 #include <cstring>
 #include <QFile>
-#include <QStandardPaths>
 
 #include <iostream>
 
@@ -28,6 +29,12 @@ MainWindow::MainWindow(QWidget* parent) :
     connectToMailBox(getTestUser());
     showLetters();
 
+    if (closePop3Connection()) {
+        qDebug() << "connection closed";
+    } else {
+        qDebug() << "connection not closed";
+    }
+
     connect(ui->tableWidget, &QTableWidget::cellDoubleClicked, this, &MainWindow::showLetter);
 }
 
@@ -38,26 +45,8 @@ MainWindow::~MainWindow() {
 }
 
 void MainWindow::showLetter(const int& letterNumber) {
-    if (connectionStatus.pop3UserAuth && connectionStatus.pop3Connection) {
-        LetterDialog* letterDialog = new LetterDialog(this);
-        letterDialog->showLetter(*pop3Client, letterNumber + 1);
-//        char* response = pop3Client->sendRequest(std::string("RETR ").
-//                         append(std::to_string(letterNumber)).
-//                         append("\r\n"));
-
-//        QString strResponse(response);
-//        delete[] response;
-//        if (PostClient::isPop3ResponseCorrect(strResponse)) {
-//            auto boundaryBeginPos = strResponse.indexOf("boundary=\"");         // Return value can be -1
-//            auto boundaryEndPos = strResponse.indexOf("\"", boundaryBeginPos);  // Return value can be -1
-//            QStringRef boundary(&strResponse, boundaryBeginPos, boundaryEndPos - boundaryBeginPos);
-//            qDebug() << "boundary = " << boundary
-//                     << "\tbegin = " << boundaryBeginPos
-//                     << "\tend = " << boundaryEndPos;
-//        }
-    } else {
-        ui->statusBar->showMessage("POP3 connection closed");
-    }
+    LetterDialog* letterDialog = new LetterDialog(this);
+    letterDialog->showLetter(letterBox[static_cast<size_t>(letterNumber)]);
 }
 
 void MainWindow::connectToMailBox(const UserData& user) {
@@ -88,6 +77,9 @@ void MainWindow::connectToMailBox(const UserData& user) {
     } else {
         ui->statusBar->showMessage("User was authenticated (SMTP)", ui->_5_SECONDS_IN_MS);
     }
+
+    connectionStatus.email = user.email.toStdString();
+    connectionStatus.password = user.password.toStdString();
 }
 
 bool MainWindow::connectToPop3Server(const QString& serverAddr, const QString& serverPort) {
@@ -121,6 +113,17 @@ bool MainWindow::connectToPop3User(const QString &email, const QString &password
         return true;
     }
     return false;
+}
+
+bool MainWindow::closePop3Connection() {
+    if (connectionStatus.pop3Connection && connectionStatus.pop3UserAuth) {
+        char* response = pop3Client->sendRequest("QUIT\r\n");
+        connectionStatus.pop3UserAuth = false;
+        connectionStatus.pop3Connection = false;
+
+        return PostClient::isPop3ResponseCorrect(response);
+    }
+    return true;
 }
 
 bool MainWindow::connectToSmtpServer(const QString &serverAddr, const QString &serverPort) {
@@ -171,6 +174,7 @@ void MainWindow::showLetters() {
             auto numOfLetters = std::atoi(strResponse.substr(startPos, endPos-1).c_str());
             ui->tableWidget->setRowCount(numOfLetters);
             ui->tableWidget->setColumnCount(1);
+            letterBox.reserve(static_cast<size_t>(numOfLetters));
             for (int i = 1; i <= numOfLetters; i++) {
                 response = pop3Client->sendRequest(std::string("RETR ")
                                                    .append(std::to_string(i))
@@ -184,6 +188,7 @@ void MainWindow::showLetters() {
                     tableItem->setFlags(tableItem->flags() ^ Qt::ItemIsEditable);
                     ui->tableWidget->setItem(i-2, 1, tableItem);
                     delete subject;
+                    letterBox.push_back(responseStr);
                 } else {
                     qDebug() << "Error response: " << response;
                     ui->statusBar->showMessage(QString(response));
