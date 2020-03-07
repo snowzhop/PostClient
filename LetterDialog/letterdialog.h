@@ -17,7 +17,7 @@ public:
     LetterDialog(QWidget* parent = nullptr);
     virtual ~LetterDialog();
 
-    void showLetter(POP3Client& pop3Client, const int& letterNumber);
+    void showLetter(const std::string& letter);
 
 private:
     QWidget* centralWidget = nullptr;
