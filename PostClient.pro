@@ -30,6 +30,7 @@ DEFINES += QT_DEPRECATED_WARNINGS
 CONFIG += c++17
 
 SOURCES += \
+        AttachmentPushButton/AttachmentPushButton.cpp \
         Base64/base64util.cpp \
         LetterDialog/letterdialog.cpp \
         LoginDialog/logindialog.cpp \
@@ -40,6 +41,7 @@ SOURCES += \
         mainwindow.cpp
 
 HEADERS += \
+        AttachmentPushButton/AttachmentPushButton.h \
         Base64/base64util.h \
         LetterDialog/letterdialog.h \
         LoginDialog/logindialog.h \
@@ -58,3 +60,6 @@ FORMS += \
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
+
+RESOURCES += \
+    images.qrc
