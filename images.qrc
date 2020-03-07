@@ -1,2 +1,10 @@
-<!DOCTYPE RCC>
-<RCC version="1.0"/>
+<RCC>
+    <qresource prefix="/images">
+        <file alias="down-arrow_32px.png">resources/images/down-arrow_32px.png</file>
+        <file alias="down-arrow64px.png">resources/images/down-arrow_64px.png</file>
+        <file alias="mail_32px.png">resources/images/mail_32px.png</file>
+        <file alias="mail_64px.png">resources/images/mail_64px.png</file>
+        <file alias="attach_32px.png">resources/images/attach_32px.png</file>
+        <file alias="attach_64px.png">resources/images/attach_64px.png</file>
+    </qresource>
+</RCC>
