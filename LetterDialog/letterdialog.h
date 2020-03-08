@@ -20,13 +20,13 @@ public:
     void showLetter(const std::string& letter);
 
 private:
-    QWidget* centralWidget = nullptr;
-    QLineEdit* dateLine = nullptr;
-    QLineEdit* fromLine = nullptr;
-    QToolBar* toolBar = nullptr;
-    QPushButton* replyButton = nullptr;
+    QWidget* centralWidget      = nullptr;
+    QLineEdit* dateLine         = nullptr;
+    QLineEdit* fromLine         = nullptr;
+    QToolBar* toolBar           = nullptr;
+    QPushButton* replyButton    = nullptr;
 
-    QVBoxLayout* mainLayout = nullptr;
+    QVBoxLayout* mainLayout     = nullptr;
 
     QTextEdit* createTextEditView(const std::string& text);
     QWebEngineView* createWebView(const std::string& text);
