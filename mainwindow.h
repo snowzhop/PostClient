@@ -32,8 +32,9 @@ public:
     static const size_t lenOfSubjectStr = 10;
     static const char codingOffset = 2;
 
-public slots:
+private slots:
     void showLetter(const int& letterNumber);
+    void sendLetter();
 
 private:
     void connectToMailBox(const UserData& user);
@@ -46,7 +47,6 @@ private:
 
     bool connectToSmtpServer(const QString& serverAddr, const QString& serverPort);
     bool connectToSmtpUser(const QString& email, const QString& password);
-    void sendLetter();
 
     Ui_Main *ui;
     POP3Client* pop3Client = nullptr;

@@ -4,7 +4,6 @@
 #include "QMainWindow"
 #include <QToolBar>
 #include <QTableWidget>
-#include <QMenuBar>
 #include <QPushButton>
 #include <QStyle>
 #include <QBoxLayout>
@@ -14,10 +13,11 @@ class Ui_Main {
 public:
     QWidget* centralWidget;
     QToolBar* toolBar;
-    QMenuBar* menuBar;
     QTableWidget* tableWidget;
     QBoxLayout* boxLayout;
     QStatusBar* statusBar;
+    QPushButton* sendingButton;
+    QPushButton* refreshButton;
 
     static const int _5_SECONDS_IN_MS = 5000;
 
@@ -38,13 +38,13 @@ public:
         toolBar->setObjectName("toolBar");
         toolBar->setMovable(false);
 
-        QPushButton* testButton = new QPushButton();
-        testButton->setText("Тестовая");
-        toolBar->addWidget(testButton);
+        sendingButton = new QPushButton(toolBar);
+        sendingButton->setText("Отправить");
+        toolBar->addWidget(sendingButton);
 
-        menuBar = new QMenuBar(mainWindow);
-        menuBar->setObjectName("menuBar");
-        menuBar->addMenu("Test menu");
+        refreshButton = new QPushButton(toolBar);
+        refreshButton->setText("Обновить");
+        toolBar->addWidget(refreshButton);
 
         statusBar = new QStatusBar(mainWindow);
         statusBar->setObjectName("statusBar");
@@ -54,7 +54,6 @@ public:
 
         mainWindow->setStatusBar(statusBar);
         mainWindow->addToolBar(Qt::TopToolBarArea, toolBar);
-        mainWindow->setMenuBar(menuBar);
         mainWindow->setCentralWidget(centralWidget);
     }
 };

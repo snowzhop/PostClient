@@ -1,6 +1,7 @@
 #include "mainwindow.h"
 #include "LoginDialog/userdata.h"
 #include "LetterDialog/letterdialog.h"
+#include "SendingDialog/SendingDialog.h"
 #include "Base64/base64util.h"
 #include "PostClient/PostClient.h"
 #include "ui_main.h"
@@ -36,6 +37,7 @@ MainWindow::MainWindow(QWidget* parent) :
     }
 
     connect(ui->tableWidget, &QTableWidget::cellDoubleClicked, this, &MainWindow::showLetter);
+    connect(ui->sendingButton, &QPushButton::clicked, this, &MainWindow::sendLetter);
 }
 
 MainWindow::~MainWindow() {
@@ -47,6 +49,11 @@ MainWindow::~MainWindow() {
 void MainWindow::showLetter(const int& letterNumber) {
     LetterDialog* letterDialog = new LetterDialog(this);
     letterDialog->showLetter(letterBox[static_cast<size_t>(letterNumber)]);
+}
+
+void MainWindow::sendLetter() {
+    SendingDialog* sendingDialog = new SendingDialog(this);
+    sendingDialog->show();
 }
 
 void MainWindow::connectToMailBox(const UserData& user) {
