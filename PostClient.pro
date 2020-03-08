@@ -37,6 +37,7 @@ SOURCES += \
         POP3/pop3Client.cpp \
         PostClient/PostClient.cpp \
         SMTP/smtpClient.cpp \
+        SendingDialog/SendingDialog.cpp \
         main.cpp \
         mainwindow.cpp
 
@@ -49,6 +50,7 @@ HEADERS += \
         POP3/pop3Client.h \
         PostClient/PostClient.h \
         SMTP/smtpClient.h \
+        SendingDialog/SendingDialog.h \
         data.h \
         mainwindow.h \
         ui_main.h
