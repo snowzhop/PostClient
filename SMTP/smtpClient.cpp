@@ -11,6 +11,9 @@
 #include "smtpClient.h"
 #include "Base64/base64util.h"
 
+#include <QByteArray>
+#include <QDebug>
+
 #define BASE64_SIZE(x)  (((x)+2) / 3 * 4 + 1)
 
 SmtpClient::SmtpClient() {
@@ -24,7 +27,12 @@ SmtpClient::SmtpClient() {
 
 SmtpClient::~SmtpClient() {
     delete[] boundary;
-    SSL_free(ssl);
+    close(socketFd);
+    if (ssl != nullptr) {
+        SSL_shutdown(ssl);
+        SSL_free(ssl);
+    }
+    EVP_cleanup();
 }
 
 int SmtpClient::recvStatus(const char* recvString) {
@@ -289,6 +297,18 @@ void SmtpClient::login(const char* smtpLogin, const char* smtpPassword) {
 //    return 0;
 }
 
+bool SmtpClient::closeConnection() {
+    char readData[SMTP_MTU];
+    sendData("QUIT\r\n", std::strlen("QUIT\r\n"));
+    memset(&readData, 0, SMTP_MTU);
+    recvData(readData, SMTP_MTU);
+    std::cout << "closeConnection>> " << readData << std::endl;
+    if (recvStatus(readData) < 0) {
+        return false;
+    }
+    return true;
+}
+
 size_t SmtpClient::createLetter(const char* toMail,
                                 const char* letterSubject,
                                 const char* letterText) {
@@ -310,7 +330,7 @@ size_t SmtpClient::createLetter(const char* toMail,
             "Content-Type: text/plain; charset=\"UTF-8\"\r\n"
             "\r\n%s\r\n\r\n"
             "--%s\r\n",
-            std::string(username).append("@yandex.ru").c_str(),
+            std::string(username)./*append("@yandex.ru").*/c_str(),
             toMail,
             letterSubject,
             boundary,
@@ -330,7 +350,7 @@ int SmtpClient::sendLetter() {
     memset(&writeData, 0, SMTP_MTU);
     sprintf(writeData,
             "MAIL FROM:<%s>\r\n",
-            std::string(username).append("@yandex.ru").c_str());
+            std::string(username)./*append("@yandex.ru").*/c_str());
     sendData(writeData, std::strlen(writeData));
     std::cout << "send>> " << writeData << std::endl;
 
@@ -397,32 +417,34 @@ int SmtpClient::addAttachment(const char* filePath) {
     const char *contentEncode   = "Content-Transfer-Encoding: base64";
     const char *contentDes      = "Content-Disposition: attachment";
     long fileLength = -1;
-    size_t attachmentHeaderSize = strlen(contentType) +
-                                  (strlen(filePath) * 2) +
-                                  strlen(contentEncode) +
-                                  strlen(contentDes) + 50;
-    std::ifstream fileAttachment(filePath, std::ios::binary);
+    int attachmentHeaderSize = strlen(contentType) +
+                               (strlen(filePath) * 2) +
+                               strlen(contentEncode) +
+                               strlen(contentDes) + 50;
+    std::ifstream fileAttachment(filePath, std::ios::in | std::ios::binary | std::ios::ate);
 
-    fileAttachment.seekg(0, std::ifstream::end);
+//    fileAttachment.seekg(0, std::ifstream::end);
     fileLength = fileAttachment.tellg();
     fileAttachment.seekg(0, std::ifstream::beg);
 
     if (fileLength < 0) {
         std::cerr << "Can't get size of the file " << filePath << "!" << std::endl;
         return -1;
+    } else {
+        std::cout << "fileLength: " << fileLength << std::endl;
     }
 
-    char* binaryAttachment = new char[fileLength];
-    char* attachmentHeader = new char[attachmentHeaderSize];
+    char* binaryAttachment = new char[static_cast<size_t>(fileLength)];
+    memset(binaryAttachment, 0, static_cast<size_t>(fileLength));
+    char* attachmentHeader = new char[static_cast<size_t>(attachmentHeaderSize)];
     char* base64BinaryAttachment = nullptr;
 
     fileAttachment.read(binaryAttachment, fileLength);
-
-    base64BinaryAttachment = encodeBase64(binaryAttachment);
+    base64BinaryAttachment = base64_encode(binaryAttachment, static_cast<size_t>(fileLength));
     delete[] binaryAttachment;
     std::cout << "addAttachment>> created Base64 attachment version" << std::endl;
 
-    memset(attachmentHeader, 0, attachmentHeaderSize);
+    memset(attachmentHeader, 0, static_cast<size_t>(attachmentHeaderSize));
     sprintf(attachmentHeader,
             "%s;\n name=\"%s\"\r\n"
             "%s\r\n"
@@ -443,4 +465,31 @@ int SmtpClient::addAttachment(const char* filePath) {
     delete[] base64BinaryAttachment;
 
     return 0;
+}
+
+char* base64_encode(const char *data, size_t input_length) {
+    size_t output_length;
+    size_t i, j;
+
+    output_length = 4 * ((input_length + 2) / 3);
+    char* encoded_data = new char[output_length];
+    memset(encoded_data, 0, output_length);
+
+    for (i = 0, j = 0; i < input_length;) {
+
+        uint32_t octet_a = i < input_length ? static_cast<unsigned char>(data[i++]) : 0;
+        uint32_t octet_b = i < input_length ? static_cast<unsigned char>(data[i++]) : 0;
+        uint32_t octet_c = i < input_length ? static_cast<unsigned char>(data[i++]) : 0;
+
+        uint32_t triple = (octet_a << 0x10) + (octet_b << 0x08) + octet_c;
+
+        encoded_data[j++] = base64_encoding_table[(triple >> 3 * 6) & 0x3F];
+        encoded_data[j++] = base64_encoding_table[(triple >> 2 * 6) & 0x3F];
+        encoded_data[j++] = base64_encoding_table[(triple >> 1 * 6) & 0x3F];
+        encoded_data[j++] = base64_encoding_table[(triple >> 0 * 6) & 0x3F];
+    }
+
+    for (i = 0; i < base64_mod_table[input_length % 3]; i++)
+        encoded_data[output_length - 1 - i] = '=';
+    return encoded_data;
 }
