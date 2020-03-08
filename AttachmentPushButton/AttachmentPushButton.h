@@ -10,6 +10,7 @@ public:
     virtual ~AttachmentPushButton() override;
 
     void setAttachment(const QByteArray& attach);
+    QByteArray getAttachment();
 
 public slots:
     void saveAttachment();

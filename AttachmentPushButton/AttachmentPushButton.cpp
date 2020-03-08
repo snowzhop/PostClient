@@ -49,3 +49,7 @@ void AttachmentPushButton::saveAttachment() {
     }
     qDebug() << "Attachment " << this->text() << " saved c:";
 }
+
+QByteArray AttachmentPushButton::getAttachment() {
+    return attachment;
+}
