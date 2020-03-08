@@ -7,6 +7,7 @@
 #include <QLabel>
 #include <QToolBar>
 #include <QPushButton>
+#include <QFileDialog>
 
 #include <QDebug>
 
@@ -48,7 +49,7 @@ SendingDialog::SendingDialog(QWidget* parent) :
 
     this->addToolBar(Qt::LeftToolBarArea, toolBar);
 
-    connect(sendButton, &QPushButton::clicked, this, &SendingDialog::sendLetter);
+    connect(sendButton, &QPushButton::clicked, this, &SendingDialog::finishLetter);
     connect(attachmentButton, &QPushButton::clicked, this, &SendingDialog::addAttachment);
 }
 
@@ -58,10 +59,20 @@ SendingDialog::~SendingDialog() {
     delete letterEdit;
 }
 
-void SendingDialog::sendLetter() {
-    qDebug() << "letter sended";
+void SendingDialog::letterPreparing() {
+    this->show();
+}
+
+void SendingDialog::finishLetter() {
+    emit compileLetter(receiverEmailEdit->text().toStdString(),
+                       subjectEdit->text().toStdString(),
+                       letterEdit->toPlainText().toStdString(),
+                       attachmentPath);
+    qDebug() << "letter finished";
+    this->close();
 }
 
 void SendingDialog::addAttachment() {
-    qDebug() << "attachment added";
+    attachmentPath = QFileDialog::getOpenFileName(this, "Select file", ".").toStdString();
+    qDebug() << "attachment: " << attachmentPath.c_str();
 }

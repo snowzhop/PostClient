@@ -32,9 +32,12 @@ public:
     static const size_t lenOfSubjectStr = 10;
     static const char codingOffset = 2;
 
+public slots:
+    void sendLetter(std::string email, std::string subject, std::string text, std::string attachmentPath);
+
 private slots:
     void showLetter(const int& letterNumber);
-    void sendLetter();
+    void createLetter();
 
 private:
     void connectToMailBox(const UserData& user);

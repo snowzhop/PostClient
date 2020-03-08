@@ -27,7 +27,9 @@ MainWindow::MainWindow(QWidget* parent) :
 
     auto user = PostClient::getUserInfo(this);
 
-    connectToMailBox(getTestUser());
+//    connectToMailBox(getTestUser());
+    connectToPop3Server(getTestUser().pop3Server, getTestUser().pop3Port);
+    connectToPop3User(getTestUser().email, getTestUser().password);
     showLetters();
 
     if (closePop3Connection()) {
@@ -37,7 +39,7 @@ MainWindow::MainWindow(QWidget* parent) :
     }
 
     connect(ui->tableWidget, &QTableWidget::cellDoubleClicked, this, &MainWindow::showLetter);
-    connect(ui->sendingButton, &QPushButton::clicked, this, &MainWindow::sendLetter);
+    connect(ui->sendingButton, &QPushButton::clicked, this, &MainWindow::createLetter);
 }
 
 MainWindow::~MainWindow() {
@@ -51,9 +53,23 @@ void MainWindow::showLetter(const int& letterNumber) {
     letterDialog->showLetter(letterBox[static_cast<size_t>(letterNumber)]);
 }
 
-void MainWindow::sendLetter() {
+void MainWindow::sendLetter(std::string email, std::string subject, std::string text, std::string attachmentPath) {
+    connectToSmtpServer(getTestUser().smtpServer, getTestUser().smtpPort);
+    connectToSmtpUser(getTestUser().email, getTestUser().password);
+    smtpClient->createLetter(email.c_str(), subject.c_str(), text.c_str());
+    if (attachmentPath.length() != 0) {
+        qDebug() << "attachment added";
+        smtpClient->addAttachment(attachmentPath.c_str());
+    }
+    smtpClient->endLetter();
+    smtpClient->sendLetter();
+    ui->statusBar->showMessage("Letter sended", ui->_5_SECONDS_IN_MS);
+}
+
+void MainWindow::createLetter() {
     SendingDialog* sendingDialog = new SendingDialog(this);
-    sendingDialog->show();
+    sendingDialog->letterPreparing();
+    connect(sendingDialog, &SendingDialog::compileLetter, this, &MainWindow::sendLetter);
 }
 
 void MainWindow::connectToMailBox(const UserData& user) {

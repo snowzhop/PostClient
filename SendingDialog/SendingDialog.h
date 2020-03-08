@@ -4,6 +4,7 @@
 #include <QMainWindow>
 #include <QLineEdit>
 #include <QTextEdit>
+#include <SMTP/smtpClient.h>
 
 class SendingDialog : public QMainWindow {
     Q_OBJECT
@@ -18,10 +19,16 @@ private:
     QTextEdit* letterEdit           = nullptr;
     QToolBar* toolBar               = nullptr;
 
-    QByteArray attachment;
+    std::string attachmentPath;
+
+public slots:
+    void letterPreparing();
+    void finishLetter();
+
+signals:
+    void compileLetter(std::string email, std::string subject, std::string text, std::string attachmentPath);
 
 private slots:
-    void sendLetter();
     void addAttachment();
 };
 
