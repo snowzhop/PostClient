@@ -6,5 +6,13 @@
         <file alias="mail_64px.png">resources/images/mail_64px.png</file>
         <file alias="attach_32px.png">resources/images/attach_32px.png</file>
         <file alias="attach_64px.png">resources/images/attach_64px.png</file>
+        <file alias="delete_32px.png">resources/images/delete_32px.png</file>
+        <file alias="delete_64px.png">resources/images/delete_64px.png</file>
+        <file alias="send_32px.png">resources/images/send_32px.png</file>
+        <file alias="send_64px.png">resources/images/send_64px.png</file>
+        <file alias="refresh_32px.png">resources/images/refresh_32px.png</file>
+        <file alias="refresh_64px.png">resources/images/refresh_64px.png</file>
+        <file alias="login_32px.png">resources/images/login_32px.png</file>
+        <file alias="login_64px.png">resources/images/login_64px.png</file>
     </qresource>
 </RCC>
