@@ -12,6 +12,8 @@ public:
     SendingDialog(QWidget* parent = nullptr);
     virtual ~SendingDialog();
 
+    void setEmail(const std::string& email);
+
 private:
     QWidget* centralWidget          = nullptr;
     QLineEdit* receiverEmailEdit    = nullptr;

@@ -38,8 +38,15 @@ SendingDialog::SendingDialog(QWidget* parent) :
     mainLayout->addLayout(subjectLayout);
     mainLayout->addWidget(letterEdit);
 
-    QPushButton* sendButton         = new QPushButton("Отправить", this);
-    QPushButton* attachmentButton   = new QPushButton("Вложения", this);
+    QSize buttonSize(28,28);
+
+    QPushButton* sendButton = new QPushButton("Отправить", this);
+    sendButton->setIcon(QIcon(":/images/send_64px.png"));
+    sendButton->setIconSize(buttonSize);
+
+    QPushButton* attachmentButton = new QPushButton("Вложения", this);
+    attachmentButton->setIcon(QIcon(":/images/attach_64px.png"));
+    attachmentButton->setIconSize(buttonSize);
 
     toolBar = new QToolBar(centralWidget);
     toolBar->addWidget(sendButton);
@@ -75,4 +82,10 @@ void SendingDialog::finishLetter() {
 void SendingDialog::addAttachment() {
     attachmentPath = QFileDialog::getOpenFileName(this, "Select file", ".").toStdString();
     qDebug() << "attachment: " << attachmentPath.c_str();
+}
+
+void SendingDialog::setEmail(const std::string &email) {
+    if (!email.empty()) {
+        receiverEmailEdit->setText(QString(email.c_str()));
+    }
 }
