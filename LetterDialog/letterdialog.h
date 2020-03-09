@@ -17,7 +17,7 @@ public:
     LetterDialog(QWidget* parent = nullptr);
     virtual ~LetterDialog();
 
-    void showLetter(const std::string& letter);
+    void showLetter(const std::string& letter, const int& letterNumber);
 
 private:
     QWidget* centralWidget      = nullptr;
@@ -34,6 +34,12 @@ private:
 
     std::string getQuotedPrintableDecodedPlainLetter(const std::string& letter);
     std::string getQuotedPrintableDecodedHtmlLetter(const std::string& letter);
+
+    int letterNumber;
+
+signals:
+    void deleteLetterSignal(const int& letterNumber);
+    void replySignal(const std::string& email);
 };
 
 

@@ -3,6 +3,8 @@
 #include "Base64/base64util.h"
 #include "POP3/pop3Client.h"
 #include "AttachmentPushButton/AttachmentPushButton.h"
+#include "mainwindow.h"
+#include "SendingDialog/SendingDialog.h"
 
 #include <QLabel>
 #include <QVBoxLayout>
@@ -54,7 +56,7 @@ LetterDialog::LetterDialog(QWidget* parent) :
     toolBar->setMovable(false);
     replyButton = new QPushButton("ответ", toolBar);
     replyButton->setIcon(QIcon(":/images/mail_64px.png"));
-    replyButton->setIconSize(QSize(32,32));
+    replyButton->setIconSize(QSize(28,28));
     toolBar->addWidget(replyButton);
     toolBar->addSeparator();
     this->addToolBar(Qt::LeftToolBarArea, toolBar);
@@ -70,8 +72,9 @@ LetterDialog::~LetterDialog() {
     delete mainLayout;
 }
 
-void LetterDialog::showLetter(const std::string& wholeLetter) {
+void LetterDialog::showLetter(const std::string& wholeLetter, const int& letterNumber) {
     this->show();
+    this->letterNumber = letterNumber;
 
     auto endOfHeader = wholeLetter.find("\r\n\r\n");
     std::string header = wholeLetter.substr(0, endOfHeader);
@@ -239,6 +242,7 @@ void LetterDialog::showLetter(const std::string& wholeLetter) {
         qDebug() << "filename: " << filename.c_str();
         AttachmentPushButton* attachmentButton = new AttachmentPushButton(toolBar);
         attachmentButton->setMaximumSize(200, 50);
+        attachmentButton->setMinimumSize(28, 28);
         attachmentButton->setText(filename.c_str());
 
         beginPos = letter.find("\r\n\r\n", beginPos) + 4;
@@ -259,6 +263,34 @@ void LetterDialog::showLetter(const std::string& wholeLetter) {
         toolBar->addWidget(attachmentButton);
 
     }
+
+    QString* email = new QString(fromLine->text());
+    qDebug() << "email before: " << *email;
+    qDebug() << email->indexOf('<');
+    if (email->indexOf('<')) {
+        qDebug() << email->indexOf('>');
+        *email = email->mid(email->indexOf('<') + 1, email->indexOf('>') - email->indexOf('<') - 1);
+        qDebug() << "new email: " << *email;
+    }
+
+    connect(replyButton, &QPushButton::clicked, [this, email]() {
+        qDebug() << "reply email: " << *email;
+        emit this->replySignal(email->toStdString());
+    });
+
+    QWidget* spacer = new QWidget(toolBar);
+    spacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    toolBar->addWidget(spacer);
+
+    QPushButton* deleteButton = new QPushButton(toolBar);
+    deleteButton->setText("Удалить");
+    deleteButton->setIcon(QIcon(":/images/delete_64px.png"));
+
+    toolBar->addWidget(deleteButton);
+    connect(deleteButton, &QPushButton::clicked, this, [letterNumber, this]() {
+        emit this->deleteLetterSignal(letterNumber);
+        this->close();
+    });
 }
 
 QTextEdit* LetterDialog::createTextEditView(const std::string &text) {
