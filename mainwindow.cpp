@@ -26,17 +26,11 @@ MainWindow::MainWindow(QWidget* parent) :
     this->show();
 
     auto user = PostClient::getUserInfo(this);
+    user = getTestUser();
+    connectionStatus.user = user;
 
 //    connectToMailBox(getTestUser());
-    connectToPop3Server(getTestUser().pop3Server, getTestUser().pop3Port);
-    connectToPop3User(getTestUser().email, getTestUser().password);
     showLetters();
-
-    if (closePop3Connection()) {
-        qDebug() << "connection closed";
-    } else {
-        qDebug() << "connection not closed";
-    }
 
     connect(ui->tableWidget, &QTableWidget::cellDoubleClicked, this, &MainWindow::showLetter);
     connect(ui->sendingButton, &QPushButton::clicked, this, &MainWindow::createLetter);
@@ -50,12 +44,14 @@ MainWindow::~MainWindow() {
 
 void MainWindow::showLetter(const int& letterNumber) {
     LetterDialog* letterDialog = new LetterDialog(this);
-    letterDialog->showLetter(letterBox[static_cast<size_t>(letterNumber)]);
+    letterDialog->showLetter(letterBox[static_cast<size_t>(letterNumber)], letterNumber);
+    connect(letterDialog, &LetterDialog::deleteLetterSignal, this, &MainWindow::deleteLetter);
+    connect(letterDialog, &LetterDialog::replySignal, this, &MainWindow::reply);
 }
 
 void MainWindow::sendLetter(std::string email, std::string subject, std::string text, std::string attachmentPath) {
-    connectToSmtpServer(getTestUser().smtpServer, getTestUser().smtpPort);
-    connectToSmtpUser(getTestUser().email, getTestUser().password);
+    connectToSmtpServer(connectionStatus.user.smtpServer, connectionStatus.user.smtpPort);
+    connectToSmtpUser(connectionStatus.user.email, connectionStatus.user.password);
     smtpClient->createLetter(email.c_str(), subject.c_str(), text.c_str());
     if (attachmentPath.length() != 0) {
         qDebug() << "attachment added";
@@ -68,6 +64,33 @@ void MainWindow::sendLetter(std::string email, std::string subject, std::string 
 
 void MainWindow::createLetter() {
     SendingDialog* sendingDialog = new SendingDialog(this);
+    sendingDialog->letterPreparing();
+    connect(sendingDialog, &SendingDialog::compileLetter, this, &MainWindow::sendLetter);
+}
+
+void MainWindow::deleteLetter(const int& letterNumber) {
+    if (!connectionStatus.pop3Connection && !connectionStatus.pop3UserAuth) {
+        qDebug() << "letterBox.size() before deleting: " << letterBox.size();
+        connectToPop3Server(connectionStatus.user.pop3Server, connectionStatus.user.pop3Port);
+        connectToPop3User(connectionStatus.user.email, connectionStatus.user.password);
+        char* response = pop3Client->sendRequest(std::string("DELE ").
+                         append(std::to_string(letterNumber+1)).
+                         append("\r\n"));
+        closePop3Connection();
+        qDebug() << response;
+        ui->statusBar->showMessage(QString(response), ui->_5_SECONDS_IN_MS);
+        qDebug() << "letter DeLeTeD: " << letterNumber;
+        delete[] response;
+        letterBox.erase(letterBox.begin()+letterNumber);
+        qDebug() << "letterBox.size() after deleting: " << letterBox.size();
+        ui->tableWidget->removeRow(letterNumber);
+        ui->tableWidget->update();
+    }
+}
+
+void MainWindow::reply(const std::string& email) {
+    SendingDialog* sendingDialog = new SendingDialog(this);
+    sendingDialog->setEmail(email);
     sendingDialog->letterPreparing();
     connect(sendingDialog, &SendingDialog::compileLetter, this, &MainWindow::sendLetter);
 }
@@ -100,9 +123,6 @@ void MainWindow::connectToMailBox(const UserData& user) {
     } else {
         ui->statusBar->showMessage("User was authenticated (SMTP)", ui->_5_SECONDS_IN_MS);
     }
-
-    connectionStatus.email = user.email.toStdString();
-    connectionStatus.password = user.password.toStdString();
 }
 
 bool MainWindow::connectToPop3Server(const QString& serverAddr, const QString& serverPort) {
@@ -178,6 +198,8 @@ bool MainWindow::connectToSmtpUser(const QString &email, const QString &password
 }
 
 void MainWindow::showLetters() {
+    connectToPop3Server(connectionStatus.user.pop3Server, connectionStatus.user.pop3Port);
+    connectToPop3User(connectionStatus.user.email, connectionStatus.user.password);
     if (connectionStatus.pop3Connection) {
         char* response = pop3Client->sendRequest("LIST\r\n");
         if (PostClient::isPop3ResponseCorrect(response)) {
@@ -217,6 +239,12 @@ void MainWindow::showLetters() {
                     ui->statusBar->showMessage(QString(response));
                 }
             }
+        }
+
+        if (closePop3Connection()) {
+            qDebug() << "connection closed";
+        } else {
+            qDebug() << "connection not closed";
         }
     }
 }

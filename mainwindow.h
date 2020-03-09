@@ -5,6 +5,7 @@
 #include <SMTP/smtpClient.h>
 #include <POP3/pop3Client.h>
 #include <LoginDialog/logindialog.h>
+#include <LoginDialog/userdata.h>
 
 class Ui_Main;
 
@@ -18,8 +19,7 @@ struct ConnectionStatus {
     bool smtpConnection = false;
     bool smtpUserAuth   = false;
 
-    std::string email;
-    std::string password;
+    UserData user;
 };
 
 class MainWindow : public QMainWindow {
@@ -38,6 +38,8 @@ public slots:
 private slots:
     void showLetter(const int& letterNumber);
     void createLetter();
+    void deleteLetter(const int& letterNumber);
+    void reply(const std::string& email);
 
 private:
     void connectToMailBox(const UserData& user);
