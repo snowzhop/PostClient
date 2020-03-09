@@ -16,6 +16,8 @@ LoginDialog::LoginDialog(QMainWindow* parent) :
     pop3PortLine(new QLineEdit(this)),
     okButton(new QPushButton("ok", this)) {
 
+    okButton->setIcon(QIcon(":/images/login_64px.png"));
+
     QLabel* smtpServerLabel = new QLabel("SMTP server", this);
     QLabel* smtpPortLabel   = new QLabel("SMTP port", this);
     QLabel* pop3ServerLabel = new QLabel("POP3 server", this);
