@@ -8,6 +8,7 @@
 #include <QStyle>
 #include <QBoxLayout>
 #include <QStatusBar>
+#include <QHeaderView>
 
 class Ui_Main {
 public:
@@ -33,17 +34,27 @@ public:
 
         tableWidget = new QTableWidget(centralWidget);
         tableWidget->setObjectName("tableWidget");
+        tableWidget->horizontalHeader()->setStretchLastSection(true);
+        tableWidget->horizontalHeader()->setVisible(false);
 
         toolBar = new QToolBar(centralWidget);
         toolBar->setObjectName("toolBar");
         toolBar->setMovable(false);
 
+        QSize buttonSize(25, 30);
+
         sendingButton = new QPushButton(toolBar);
         sendingButton->setText("Отправить");
+        sendingButton->setIcon(QIcon(":/images/send_64px.png"));
+        sendingButton->setIconSize(buttonSize);
         toolBar->addWidget(sendingButton);
+
+        toolBar->addSeparator();
 
         refreshButton = new QPushButton(toolBar);
         refreshButton->setText("Обновить");
+        refreshButton->setIcon(QIcon(":/images/refresh_64px.png"));
+        refreshButton->setIconSize(buttonSize);
         toolBar->addWidget(refreshButton);
 
         statusBar = new QStatusBar(mainWindow);
